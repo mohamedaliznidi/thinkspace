@@ -1,0 +1,204 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  settings  Json?
+  
+  notes       Note[]
+  projects    Project[]
+  areas       Area[]
+  resources   Resource[]
+  connections Connection[]
+  chats       Chat[]
+  
+  @@map("users")
+}
+
+model Note {
+  id              String   @id @default(cuid())
+  title           String
+  content         String
+  vectorEmbedding Json? // Store vector as JSON for now
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  type            NoteType @default(REGULAR)
+  metadata        Json?
+  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Connections
+  sourceConnections Connection[] @relation("SourceNote")
+  targetConnections Connection[] @relation("TargetNote")
+  
+  @@map("notes")
+}
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(ACTIVE)
+  deadline    DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Connections
+  sourceConnections Connection[] @relation("SourceProject")
+  targetConnections Connection[] @relation("TargetProject")
+  
+  @@map("projects")
+}
+
+model Area {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Connections
+  sourceConnections Connection[] @relation("SourceArea")
+  targetConnections Connection[] @relation("TargetArea")
+  
+  @@map("areas")
+}
+
+model Resource {
+  id             String       @id @default(cuid())
+  title          String
+  type           ResourceType
+  sourceUrl      String?
+  filePath       String?
+  contentExtract String?
+  vectorEmbedding Json? // Store vector as JSON for now
+  createdAt      DateTime     @default(now())
+  metadata       Json?
+  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Connections
+  sourceConnections Connection[] @relation("SourceResource")
+  targetConnections Connection[] @relation("TargetResource")
+  
+  @@map("resources")
+}
+
+model Connection {
+  id        String          @id @default(cuid())
+  strength  Float           @default(1.0)
+  createdAt DateTime        @default(now())
+  createdBy ConnectionType  @default(USER)
+  metadata  Json?
+  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Polymorphic relations for source
+  sourceNoteId     String?
+  sourceNote       Note?     @relation("SourceNote", fields: [sourceNoteId], references: [id])
+  sourceProjectId  String?
+  sourceProject    Project?  @relation("SourceProject", fields: [sourceProjectId], references: [id])
+  sourceAreaId     String?
+  sourceArea       Area?     @relation("SourceArea", fields: [sourceAreaId], references: [id])
+  sourceResourceId String?
+  sourceResource   Resource? @relation("SourceResource", fields: [sourceResourceId], references: [id])
+  
+  // Polymorphic relations for target
+  targetNoteId     String?
+  targetNote       Note?     @relation("TargetNote", fields: [targetNoteId], references: [id])
+  targetProjectId  String?
+  targetProject    Project?  @relation("TargetProject", fields: [targetProjectId], references: [id])
+  targetAreaId     String?
+  targetArea       Area?     @relation("TargetArea", fields: [targetAreaId], references: [id])
+  targetResourceId String?
+  targetResource   Resource? @relation("TargetResource", fields: [targetResourceId], references: [id])
+  
+  @@map("connections")
+}
+
+model Chat {
+  id          String      @id @default(cuid())
+  title       String
+  contextType ContextType @default(GLOBAL)
+  contextId   String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  messages Message[]
+  
+  @@map("chats")
+}
+
+model Message {
+  id        String      @id @default(cuid())
+  role      MessageRole
+  content   String
+  createdAt DateTime    @default(now())
+  metadata  Json?
+  
+  chatId String
+  chat   Chat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  
+  @@map("messages")
+}
+
+enum NoteType {
+  REGULAR
+  PROJECT
+  AREA
+}
+
+enum ProjectStatus {
+  ACTIVE
+  PLANNING
+  COMPLETED
+  ARCHIVED
+}
+
+enum ResourceType {
+  PDF
+  IMAGE
+  WEBSITE
+  VIDEO
+  AUDIO
+  CODE
+}
+
+enum ConnectionType {
+  USER
+  AI
+}
+
+enum ContextType {
+  GLOBAL
+  PROJECT
+  AREA
+  RESOURCE
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
