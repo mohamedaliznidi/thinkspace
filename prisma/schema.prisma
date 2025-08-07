@@ -1,117 +1,292 @@
+// =============================================================================
+// THINKSPACE PRISMA SCHEMA - PARA METHODOLOGY KNOWLEDGE MANAGEMENT SYSTEM
+// =============================================================================
+// This schema implements the PARA methodology (Projects, Areas, Resources, Archive)
+// with additional features for chat, knowledge graphs, and AI integration.
+
 generator client {
   provider      = "prisma-client-js"
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
 }
+
+// =============================================================================
+// USER MANAGEMENT
+// =============================================================================
 
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String
-  createdAt DateTime @default(now())
-  settings  Json?
-  
-  notes       Note[]
-  projects    Project[]
-  areas       Area[]
-  resources   Resource[]
-  connections Connection[]
-  chats       Chat[]
-  
+  password  String
+  role      UserRole @default(USER)
+  isActive  Boolean  @default(true)
+
+  // Profile information
+  avatar    String?
+  bio       String?
+  timezone  String?  @default("UTC")
+
+  // Preferences
+  preferences Json?
+  settings    Json?
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  lastLoginAt DateTime?
+
+  // PARA Methodology Relations
+  projects  Project[]
+  areas     Area[]
+  resources Resource[]
+  notes     Note[]
+
+  // Chat and AI Relations
+  chats     Chat[]
+  messages  Message[]
+
+  // Knowledge Graph Relations
+  connections   Connection[]
+  graphSnapshots GraphSnapshot[]
+
+  // File Relations
+  files     File[]
+
+  // Activity Relations
+  activities Activity[]
+
+  // Search Relations
+  searches  Search[]
+
   @@map("users")
 }
+
+// =============================================================================
+// PARA METHODOLOGY - NOTES
+// =============================================================================
 
 model Note {
   id              String   @id @default(cuid())
   title           String
   content         String
-  vectorEmbedding Json? // Store vector as JSON for now
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  type            NoteType @default(REGULAR)
+  type            NoteType @default(QUICK)
+
+  // Vector embedding for semantic search
+  embedding       Unsupported("vector(1536)")?
+
+  // Metadata
+  tags            String[]
   metadata        Json?
-  
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Connections
+
+  // Relations
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // PARA Relations
+  projects        Project[] @relation("ProjectNotes")
+  areas           Area[]    @relation("AreaNotes")
+  resources       Resource[] @relation("NoteResources")
+
+  // Chat Relations
+  chats           Chat[]
+
+  // File Relations
+  files           File[]    @relation("NoteFiles")
+
+  // Connection Relations
   sourceConnections Connection[] @relation("SourceNote")
   targetConnections Connection[] @relation("TargetNote")
-  
+
+  // Activity Relations
+  activities      Activity[]
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
   @@map("notes")
+  @@index([userId, type])
+  @@index([createdAt])
 }
+
+// =============================================================================
+// PARA METHODOLOGY - PROJECTS
+// =============================================================================
 
 model Project {
   id          String        @id @default(cuid())
-  name        String
+  title       String
   description String?
-  status      ProjectStatus @default(ACTIVE)
-  deadline    DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Connections
+  status      ProjectStatus @default(PLANNING)
+  priority    ProjectPriority @default(MEDIUM)
+
+  // Project details
+  startDate   DateTime?
+  dueDate     DateTime?
+  completedAt DateTime?
+
+  // Progress tracking
+  progress    Int          @default(0) // 0-100
+
+  // Metadata
+  tags        String[]
+  metadata    Json?
+
+  // Relations
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // PARA Relations
+  areas       Area[]       @relation("ProjectAreas")
+  resources   Resource[]   @relation("ProjectResources")
+  notes       Note[]       @relation("ProjectNotes")
+
+  // Chat Relations
+  chats       Chat[]
+
+  // File Relations
+  files       File[]       @relation("ProjectFiles")
+
+  // Connection Relations
   sourceConnections Connection[] @relation("SourceProject")
   targetConnections Connection[] @relation("TargetProject")
-  
+
+  // Activity Relations
+  activities  Activity[]
+
+  // Timestamps
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
   @@map("projects")
+  @@index([userId, status])
+  @@index([dueDate])
+  @@index([priority])
 }
+
+// =============================================================================
+// PARA METHODOLOGY - AREAS
+// =============================================================================
 
 model Area {
   id          String   @id @default(cuid())
-  name        String
+  title       String
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Connections
+  type        AreaType @default(OTHER)
+
+  // Area details
+  isActive    Boolean  @default(true)
+  color       String?  // Hex color for UI
+
+  // Metadata
+  tags        String[]
+  metadata    Json?
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // PARA Relations
+  projects    Project[] @relation("ProjectAreas")
+  resources   Resource[] @relation("AreaResources")
+  notes       Note[]    @relation("AreaNotes")
+
+  // Chat Relations
+  chats       Chat[]
+
+  // File Relations
+  files       File[]    @relation("AreaFiles")
+
+  // Connection Relations
   sourceConnections Connection[] @relation("SourceArea")
   targetConnections Connection[] @relation("TargetArea")
-  
+
+  // Activity Relations
+  activities  Activity[]
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
   @@map("areas")
+  @@index([userId, type])
+  @@index([isActive])
 }
+
+// =============================================================================
+// PARA METHODOLOGY - RESOURCES
+// =============================================================================
 
 model Resource {
   id             String       @id @default(cuid())
   title          String
-  type           ResourceType
+  description    String?
+  type           ResourceType @default(OTHER)
+
+  // Resource content
   sourceUrl      String?
   filePath       String?
   contentExtract String?
-  vectorEmbedding Json? // Store vector as JSON for now
-  createdAt      DateTime     @default(now())
+
+  // Vector embedding for semantic search
+  embedding      Unsupported("vector(1536)")?
+
+  // Metadata
+  tags           String[]
   metadata       Json?
-  
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  // Connections
+
+  // Relations
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // PARA Relations
+  projects       Project[]    @relation("ProjectResources")
+  areas          Area[]       @relation("AreaResources")
+  notes          Note[]       @relation("NoteResources")
+
+  // Chat Relations
+  chats          Chat[]
+
+  // File Relations
+  files          File[]       @relation("ResourceFiles")
+
+  // Connection Relations
   sourceConnections Connection[] @relation("SourceResource")
   targetConnections Connection[] @relation("TargetResource")
-  
+
+  // Activity Relations
+  activities     Activity[]
+
+  // Timestamps
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
   @@map("resources")
+  @@index([userId, type])
+  @@index([createdAt])
 }
+
+// =============================================================================
+// KNOWLEDGE GRAPH - CONNECTIONS
+// =============================================================================
 
 model Connection {
   id        String          @id @default(cuid())
   strength  Float           @default(1.0)
-  createdAt DateTime        @default(now())
-  createdBy ConnectionType  @default(USER)
+  createdBy ConnectionType  @default(MANUAL)
   metadata  Json?
-  
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  // Relations
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   // Polymorphic relations for source
   sourceNoteId     String?
   sourceNote       Note?     @relation("SourceNote", fields: [sourceNoteId], references: [id])
@@ -121,7 +296,7 @@ model Connection {
   sourceArea       Area?     @relation("SourceArea", fields: [sourceAreaId], references: [id])
   sourceResourceId String?
   sourceResource   Resource? @relation("SourceResource", fields: [sourceResourceId], references: [id])
-  
+
   // Polymorphic relations for target
   targetNoteId     String?
   targetNote       Note?     @relation("TargetNote", fields: [targetNoteId], references: [id])
@@ -131,74 +306,293 @@ model Connection {
   targetArea       Area?     @relation("TargetArea", fields: [targetAreaId], references: [id])
   targetResourceId String?
   targetResource   Resource? @relation("TargetResource", fields: [targetResourceId], references: [id])
-  
+
+  // Timestamps
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
   @@map("connections")
+  @@index([userId])
+  @@index([strength])
 }
 
+// =============================================================================
+// CHAT AND AI INTEGRATION
+// =============================================================================
+
 model Chat {
-  id          String      @id @default(cuid())
+  id          String   @id @default(cuid())
   title       String
-  contextType ContextType @default(GLOBAL)
-  contextId   String?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  messages Message[]
-  
+  type        ChatType @default(GENERAL)
+
+  // Context information
+  contextId   String?  // ID of related Project, Area, Resource, or Note
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // PARA Context Relations (optional)
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id])
+  areaId      String?
+  area        Area?    @relation(fields: [areaId], references: [id])
+  resourceId  String?
+  resource    Resource? @relation(fields: [resourceId], references: [id])
+  noteId      String?
+  note        Note?    @relation(fields: [noteId], references: [id])
+
+  // Messages
+  messages    Message[]
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
   @@map("chats")
+  @@index([userId, type])
+  @@index([createdAt])
 }
 
 model Message {
   id        String      @id @default(cuid())
   role      MessageRole
   content   String
-  createdAt DateTime    @default(now())
   metadata  Json?
-  
-  chatId String
-  chat   Chat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  
+
+  // Relations
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatId    String
+  chat      Chat        @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt DateTime    @default(now())
+
   @@map("messages")
+  @@index([chatId, createdAt])
 }
 
-enum NoteType {
-  REGULAR
-  PROJECT
-  AREA
+// =============================================================================
+// FILE MANAGEMENT
+// =============================================================================
+
+model File {
+  id          String     @id @default(cuid())
+  filename    String
+  originalName String
+  mimeType    String
+  size        Int
+  path        String
+  status      FileStatus @default(UPLOADING)
+
+  // File processing
+  contentExtract String?
+  metadata       Json?
+
+  // Vector embedding for file content
+  embedding      Unsupported("vector(1536)")?
+
+  // Relations
+  userId         String
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // PARA Relations (optional)
+  projects       Project[]  @relation("ProjectFiles")
+  areas          Area[]     @relation("AreaFiles")
+  resources      Resource[] @relation("ResourceFiles")
+  notes          Note[]     @relation("NoteFiles")
+
+  // Activity Relations
+  activities     Activity[]
+
+  // Timestamps
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@map("files")
+  @@index([userId, status])
+  @@index([mimeType])
+}
+
+// =============================================================================
+// ACTIVITY TRACKING
+// =============================================================================
+
+model Activity {
+  id          String       @id @default(cuid())
+  type        ActivityType
+  description String?
+  metadata    Json?
+
+  // Relations
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // PARA Relations (optional)
+  projectId   String?
+  project     Project?     @relation(fields: [projectId], references: [id])
+  areaId      String?
+  area        Area?        @relation(fields: [areaId], references: [id])
+  resourceId  String?
+  resource    Resource?    @relation(fields: [resourceId], references: [id])
+  noteId      String?
+  note        Note?        @relation(fields: [noteId], references: [id])
+  fileId      String?
+  file        File?        @relation(fields: [fileId], references: [id])
+
+  // Timestamps
+  createdAt   DateTime     @default(now())
+
+  @@map("activities")
+  @@index([userId, type])
+  @@index([createdAt])
+}
+
+// =============================================================================
+// SEARCH AND ANALYTICS
+// =============================================================================
+
+model Search {
+  id          String   @id @default(cuid())
+  query       String
+  results     Json?    // Store search results
+  metadata    Json?
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+
+  @@map("searches")
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// =============================================================================
+// KNOWLEDGE GRAPH SNAPSHOTS
+// =============================================================================
+
+model GraphSnapshot {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  data        Json     // Store graph data as JSON
+  metadata    Json?
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("graph_snapshots")
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
 }
 
 enum ProjectStatus {
-  ACTIVE
   PLANNING
+  ACTIVE
+  ON_HOLD
   COMPLETED
+  CANCELLED
   ARCHIVED
 }
 
+enum ProjectPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum AreaType {
+  RESPONSIBILITY
+  INTEREST
+  LEARNING
+  HEALTH
+  FINANCE
+  CAREER
+  PERSONAL
+  OTHER
+}
+
 enum ResourceType {
-  PDF
+  DOCUMENT
+  LINK
   IMAGE
-  WEBSITE
   VIDEO
   AUDIO
-  CODE
+  BOOK
+  ARTICLE
+  RESEARCH
+  REFERENCE
+  TEMPLATE
+  OTHER
 }
 
-enum ConnectionType {
-  USER
-  AI
+enum NoteType {
+  QUICK
+  MEETING
+  IDEA
+  REFLECTION
+  SUMMARY
+  RESEARCH
+  TEMPLATE
+  OTHER
 }
 
-enum ContextType {
-  GLOBAL
+enum ChatType {
+  GENERAL
   PROJECT
   AREA
   RESOURCE
+  NOTE
+  BRAINSTORM
+  ANALYSIS
 }
 
 enum MessageRole {
   USER
   ASSISTANT
+  SYSTEM
+}
+
+enum FileStatus {
+  UPLOADING
+  PROCESSING
+  READY
+  ERROR
+}
+
+enum ActivityType {
+  CREATE
+  UPDATE
+  DELETE
+  VIEW
+  SHARE
+  COMMENT
+  CONNECT
+  ARCHIVE
+}
+
+enum ConnectionType {
+  MANUAL
+  AI_SUGGESTED
+  AUTO_GENERATED
 }
