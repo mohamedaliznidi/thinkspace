@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
-      throw new AppError('Authentication required', 'UNAUTHORIZED', 401);
+      throw new AppError('Authentication required', 401);
     }
 
     const user = await prisma.user.findUnique({
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!user) {
-      throw new AppError('User not found', 'USER_NOT_FOUND', 404);
+      throw new AppError('User not found', 404);
     }
 
     return NextResponse.json({
@@ -101,7 +101,7 @@ export async function PUT(request: NextRequest) {
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
-      throw new AppError('Authentication required', 'UNAUTHORIZED', 401);
+      throw new AppError('Authentication required', 401);
     }
 
     const body = await request.json();
@@ -174,7 +174,7 @@ export async function DELETE(request: NextRequest) {
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
-      throw new AppError('Authentication required', 'UNAUTHORIZED', 401);
+      throw new AppError('Authentication required', 401);
     }
 
     // Deactivate user account instead of deleting

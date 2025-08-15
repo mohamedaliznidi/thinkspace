@@ -105,7 +105,7 @@ export function AppShellLayout({ children, breadcrumbs = [] }: AppShellLayoutPro
             {/* Right side - Actions and user menu */}
             <Group gap="sm">
               {/* Search */}
-              <Tooltip label="Search (Ctrl+K)">
+              {/* <Tooltip label="Search (Ctrl+K)">
                 <ActionIcon
                   variant="subtle"
                   size="lg"
@@ -113,7 +113,7 @@ export function AppShellLayout({ children, breadcrumbs = [] }: AppShellLayoutPro
                 >
                   <IconSearch size="1.2rem" />
                 </ActionIcon>
-              </Tooltip>
+              </Tooltip> */}
 
               {/* Notifications */}
               <Tooltip label="Notifications">
@@ -214,7 +214,7 @@ export function AppShellLayout({ children, breadcrumbs = [] }: AppShellLayoutPro
               {breadcrumbItems}
             </Breadcrumbs>
           )}
-          <SearchSpotlight opened={spotlight.opened} onClose={spotlight.close} />
+          <SearchSpotlight onClose={spotlight.close} opened={false} />
           
           {children}
         </AppShell.Main>

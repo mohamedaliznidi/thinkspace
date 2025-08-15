@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
-      throw new AppError('Authentication required', 'UNAUTHORIZED', 401);
+      throw new AppError('Authentication required', 401);
     }
 
     const { searchParams } = new URL(request.url);
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     const contentType = searchParams.get('contentType'); // 'projects', 'areas', 'resources', 'notes'
 
     if (!query || query.trim().length < 2) {
-      throw new AppError('Search query must be at least 2 characters', 'INVALID_QUERY', 400);
+      throw new AppError('Search query must be at least 2 characters', 400);
     }
 
     const searchQuery = query.trim();
@@ -177,7 +177,6 @@ export async function GET(request: NextRequest) {
             userId: session.user.id,
             OR: [
               ...searchCondition.OR,
-              { content: { contains: searchQuery, mode: 'insensitive' as const } },
             ],
           },
           select: {
@@ -185,7 +184,6 @@ export async function GET(request: NextRequest) {
             title: true,
             description: true,
             type: true,
-            fileType: true,
           },
           take: Math.floor(limit / 4),
         });
@@ -212,7 +210,6 @@ export async function GET(request: NextRequest) {
             title: true,
             content: true,
             type: true,
-            isPinned: true,
           },
           take: Math.floor(limit / 4),
         });

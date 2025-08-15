@@ -29,6 +29,7 @@ import {
   Grid,
   ColorSwatch,
   Box,
+  Anchor,
 } from '@mantine/core';
 import {
   IconPlus,
@@ -257,9 +258,18 @@ export default function AreasPage() {
                         )}
                       </Group>
                       
-                      <Text fw={600} size="sm" lineClamp={2}>
-                        {area.title}
-                      </Text>
+                      <Anchor
+                        component={Link}
+                        href={`/areas/${area.id}`}
+                        fw={600}
+                        size="sm"
+                        c="dark"
+                        style={{ textDecoration: 'none' }}
+                      >
+                        <Text fw={600} size="sm" lineClamp={2}>
+                          {area.title}
+                        </Text>
+                      </Anchor>
                       
                       {area.description && (
                         <Text size="xs" c="dimmed" lineClamp={3}>

@@ -26,6 +26,7 @@ import {
   Divider,
   Menu,
   Modal,
+  useMantineColorScheme,
 } from '@mantine/core';
 import {
   IconSend,
@@ -71,7 +72,8 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null);
   const [newChatModalOpened, { open: openNewChatModal, close: closeNewChatModal }] = useDisclosure(false);
   const [newChatTitle, setNewChatTitle] = useState('');
-  
+  const { colorScheme } = useMantineColorScheme();
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -87,8 +89,7 @@ export default function ChatPage() {
         
         // Set first chat as active if none selected
         if (!activeChat && data.data.chats.length > 0) {
-          setActiveChat(data.data.chats[0]);
-          setMessages(data.data.chats[0].messages || []);
+          selectChat(data.data.chats[0]);
         }
       }
     } catch (error) {
@@ -97,6 +98,38 @@ export default function ChatPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Load messages for a chat
+  const loadMessages = async (chatId: string) => {
+    try {
+      const response = await fetch(`/api/chat/${chatId}/messages`);
+
+      if (response.ok) {
+        const data = await response.json();
+        const formattedMessages = data.data.messages.map((msg: any) => ({
+          id: msg.id,
+          content: msg.content,
+          role: msg.role.toLowerCase() as 'user' | 'assistant',
+          createdAt: msg.createdAt,
+          metadata: msg.metadata,
+        }));
+        setMessages(formattedMessages);
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to load messages.',
+        color: 'red',
+      });
+    }
+  };
+
+  // Handle chat selection
+  const selectChat = (chat: Chat) => {
+    setActiveChat(chat);
+    loadMessages(chat.id);
   };
 
   // Create new chat
@@ -119,8 +152,7 @@ export default function ChatPage() {
         const newChat = data.data.chat;
         
         setChats(prev => [newChat, ...prev]);
-        setActiveChat(newChat);
-        setMessages([]);
+        selectChat(newChat);
         setNewChatTitle('');
         closeNewChatModal();
         
@@ -143,39 +175,63 @@ export default function ChatPage() {
   const sendMessage = async () => {
     if (!newMessage.trim() || !activeChat || sending) return;
 
-    const userMessage: Message = {
-      id: `temp-${Date.now()}`,
-      content: newMessage,
-      role: 'user',
-      createdAt: new Date().toISOString(),
-    };
-
-    // Add user message immediately
-    setMessages(prev => [...prev, userMessage]);
+    const messageContent = newMessage;
     setNewMessage('');
     setSending(true);
 
     try {
-      // Simulate AI response (replace with actual AI integration)
-      setTimeout(() => {
-        const aiMessage: Message = {
-          id: `ai-${Date.now()}`,
-          content: `I understand you're asking about: "${userMessage.content}". This is a simulated response. In the full implementation, this would connect to an AI service like OpenAI's GPT or a local LLM to provide intelligent responses based on your PARA methodology content.`,
-          role: 'assistant',
-          createdAt: new Date().toISOString(),
+      const response = await fetch(`/api/chat/${activeChat.id}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: messageContent,
+          role: 'USER',
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const { userMessage, aiMessage } = data.data;
+
+        // Convert database format to UI format
+        const formattedUserMessage: Message = {
+          id: userMessage.id,
+          content: userMessage.content,
+          role: userMessage.role.toLowerCase() as 'user' | 'assistant',
+          createdAt: userMessage.createdAt,
+          metadata: userMessage.metadata,
         };
 
-        setMessages(prev => [...prev, aiMessage]);
-        setSending(false);
-      }, 1500);
+        const formattedAiMessage: Message = {
+          id: aiMessage.id,
+          content: aiMessage.content,
+          role: aiMessage.role.toLowerCase() as 'user' | 'assistant',
+          createdAt: aiMessage.createdAt,
+          metadata: aiMessage.metadata,
+        };
 
+        // Add both messages to the conversation
+        setMessages(prev => [...prev, formattedUserMessage, formattedAiMessage]);
+
+        notifications.show({
+          title: 'Message Sent',
+          message: 'AI response received successfully.',
+          color: 'green',
+        });
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send message');
+      }
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Send message error:', error);
       notifications.show({
         title: 'Error',
-        message: 'Failed to send message.',
+        message: error instanceof Error ? error.message : 'Failed to send message.',
         color: 'red',
       });
+    } finally {
       setSending(false);
     }
   };
@@ -257,17 +313,16 @@ export default function ChatPage() {
                     radius="md"
                     style={{
                       cursor: 'pointer',
-                      backgroundColor: activeChat?.id === chat.id 
-                        ? 'var(--mantine-color-blue-light)' 
+                      backgroundColor: activeChat?.id === chat.id
+                        ? colorScheme === 'dark'
+                          ? 'var(--mantine-color-blue-9)'
+                          : 'var(--mantine-color-blue-light)'
                         : 'transparent',
-                      border: activeChat?.id === chat.id 
-                        ? '1px solid var(--mantine-color-blue-6)' 
+                      border: activeChat?.id === chat.id
+                        ? '1px solid var(--mantine-color-blue-6)'
                         : '1px solid transparent',
                     }}
-                    onClick={() => {
-                      setActiveChat(chat);
-                      setMessages(chat.messages || []);
-                    }}
+                    onClick={() => selectChat(chat)}
                   >
                     <Group justify="space-between" align="flex-start">
                       <Stack gap="xs" style={{ flex: 1 }}>
@@ -349,9 +404,11 @@ export default function ChatPage() {
                         radius="md"
                         style={{
                           maxWidth: '70%',
-                          backgroundColor: message.role === 'user' 
-                            ? 'var(--mantine-color-blue-6)' 
-                            : 'var(--mantine-color-gray-1)',
+                          backgroundColor: message.role === 'user'
+                            ? 'var(--mantine-color-blue-6)'
+                            : colorScheme === 'dark'
+                              ? 'var(--mantine-color-dark-4)'
+                              : 'var(--mantine-color-gray-1)',
                           color: message.role === 'user' ? 'white' : 'inherit',
                         }}
                       >
@@ -378,7 +435,15 @@ export default function ChatPage() {
                       <Avatar size="sm" color="blue">
                         <IconRobot size="1rem" />
                       </Avatar>
-                      <Paper p="sm" radius="md" style={{ backgroundColor: 'var(--mantine-color-gray-1)' }}>
+                      <Paper
+                        p="sm"
+                        radius="md"
+                        style={{
+                          backgroundColor: colorScheme === 'dark'
+                            ? 'var(--mantine-color-dark-6)'
+                            : 'var(--mantine-color-gray-1)'
+                        }}
+                      >
                         <Group gap="xs">
                           <Loader size="xs" />
                           <Text size="sm" c="dimmed">AI is thinking...</Text>

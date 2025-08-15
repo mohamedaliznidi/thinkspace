@@ -29,6 +29,7 @@ import {
   Pagination,
   Tabs,
   Grid,
+  Anchor,
 } from '@mantine/core';
 import {
   IconPlus,
@@ -284,9 +285,18 @@ export default function ProjectsPage() {
                         </Badge>
                       </Group>
                       
-                      <Text fw={600} size="sm" lineClamp={2}>
-                        {project.title}
-                      </Text>
+                      <Anchor
+                        component={Link}
+                        href={`/projects/${project.id}`}
+                        fw={600}
+                        size="sm"
+                        c="dark"
+                        style={{ textDecoration: 'none' }}
+                      >
+                        <Text fw={600} size="sm" lineClamp={2}>
+                          {project.title}
+                        </Text>
+                      </Anchor>
                       
                       {project.description && (
                         <Text size="xs" c="dimmed" lineClamp={3}>

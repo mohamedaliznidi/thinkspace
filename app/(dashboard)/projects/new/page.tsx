@@ -105,7 +105,6 @@ export default function NewProjectPage() {
         body: JSON.stringify({
           ...values,
           areaId: values.areaId || undefined,
-          dueDate: values.dueDate?.toISOString(),
         }),
       });
 
@@ -220,6 +219,8 @@ export default function NewProjectPage() {
 
               <Grid.Col span={{ base: 12, sm: 6 }}>
                 <DateInput
+                  clearable
+                  valueFormat="DD/MM/YYYY"
                   label="Due Date"
                   placeholder="Select due date..."
                   {...form.getInputProps('dueDate')}

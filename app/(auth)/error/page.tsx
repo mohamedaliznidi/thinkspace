@@ -1,12 +1,13 @@
 /**
  * Authentication Error Page for ThinkSpace
- * 
+ *
  * This page displays authentication errors with user-friendly messages
  * and provides options to retry or return to sign in.
  */
 
 'use client';
 
+import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Stack,
@@ -14,7 +15,9 @@ import {
   Button,
   Title,
   Text,
-  Group
+  Group,
+  Loader,
+  Center
 } from '@mantine/core';
 import { IconAlertCircle, IconArrowLeft, IconRefresh } from '@tabler/icons-react';
 import Link from 'next/link';
@@ -36,10 +39,10 @@ const errorMessages: Record<string, string> = {
   SessionRequired: 'Please sign in to access this page.',
 };
 
-export default function AuthErrorPage() {
+function AuthErrorContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get('error') || 'Default';
-  
+
   const errorMessage = errorMessages[error] || errorMessages.Default;
 
   const getErrorTitle = (error: string): string => {
@@ -132,5 +135,26 @@ export default function AuthErrorPage() {
         </Text>
       </Group>
     </Stack>
+  );
+}
+
+function ErrorPageLoading() {
+  return (
+    <Center h="400px">
+      <Stack align="center" gap="md">
+        <Loader size="lg" />
+        <Text c="dimmed" size="sm">
+          Loading error details...
+        </Text>
+      </Stack>
+    </Center>
+  );
+}
+
+export default function AuthErrorPage() {
+  return (
+    <Suspense fallback={<ErrorPageLoading />}>
+      <AuthErrorContent />
+    </Suspense>
   );
 }

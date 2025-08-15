@@ -6,68 +6,26 @@
  * and utilities throughout the application.
  */
 
-// Database connections
-export { default as prisma } from './prisma';
-export { 
-  getDriver, 
-  executeReadQuery, 
-  executeWriteQuery, 
-  executeTransaction,
-  checkNeo4jConnection,
-  closeNeo4jConnection,
-  getGraphStatistics as getNeo4jStatistics,
-  getDatabaseInfo as getNeo4jDatabaseInfo
-} from './neo4j';
+import prisma from './prisma';
 
 // Authentication
 export { 
   authOptions,
   hashPassword,
   verifyPassword,
-  generateSecureToken,
-  validatePassword,
-  createUserSession,
-  getUserFromSession,
-  requireAuth,
-  requireRole
 } from './auth';
 
 // Utility functions
 export {
   formatDate,
   formatRelativeTime,
-  validateEmail,
-  validateUrl,
   slugify,
   truncateText,
-  generateId,
-  debounce,
-  throttle,
-  deepMerge,
-  isValidJSON,
-  parseJSON,
-  sanitizeHtml,
-  extractTextFromHtml,
-  calculateReadingTime,
-  searchInText,
-  highlightSearchTerms,
   getFileExtension,
   formatFileSize,
   isImageFile,
-  isVideoFile,
-  isAudioFile,
-  isPdfFile,
-  getColorFromString,
-  generateColorPalette,
   AppError,
-  ValidationError,
-  AuthenticationError,
-  AuthorizationError,
-  NotFoundError,
-  ConflictError,
   handleApiError,
-  createApiResponse,
-  createErrorResponse
 } from './utils';
 
 // Vector search and embeddings
@@ -88,35 +46,7 @@ export {
   MAX_SEARCH_RESULTS
 } from './vector';
 
-// Neo4j schema and operations
-export {
-  NODE_LABELS,
-  RELATIONSHIP_TYPES,
-  createConstraints,
-  createIndexes,
-  createSampleStructure,
-  getSchemaInfo,
-  validateSchema,
-  setupNeo4jSchema
-} from './neo4j-schema';
 
-export {
-  createUserNode,
-  createProjectNode,
-  createAreaNode,
-  createResourceNode,
-  createNoteNode,
-  createRelationship,
-  createParaRelationship,
-  createSimilarityRelationship,
-  getUserKnowledgeGraph,
-  findRelatedEntities,
-  getEntityConnections,
-  searchEntities,
-  getGraphStatistics,
-  deleteEntity,
-  deleteRelationship
-} from './neo4j-operations';
 
 // Type definitions for commonly used types
 export type {
@@ -272,12 +202,7 @@ export const initializeThinkSpace = async () => {
     await prisma.$connect();
     console.log('✅ PostgreSQL connection established');
     
-    const neo4jConnected = await checkNeo4jConnection();
-    if (neo4jConnected) {
-      console.log('✅ Neo4j connection established');
-    } else {
-      console.warn('⚠️  Neo4j connection failed');
-    }
+ 
     
     console.log('🚀 ThinkSpace library initialized successfully');
     return true;
@@ -292,7 +217,6 @@ export const initializeThinkSpace = async () => {
 export const cleanupThinkSpace = async () => {
   try {
     await prisma.$disconnect();
-    await closeNeo4jConnection();
     console.log('✅ ThinkSpace library cleanup completed');
   } catch (error) {
     console.error('❌ Error during ThinkSpace library cleanup:', error);

@@ -230,7 +230,7 @@ export async function hybridSearch(
 
     if (includeNotes) {
       searches.push(
-        searchSimilarNotes(query, userId, limit, threshold).then(notes =>
+        searchSimilarNotes(query, userId, limit, threshold).then((notes: any) =>
           notes.map((note: any) => ({ ...note, type: 'note' }))
         )
       );
@@ -238,7 +238,7 @@ export async function hybridSearch(
 
     if (includeResources) {
       searches.push(
-        searchSimilarResources(query, userId, limit, threshold).then(resources =>
+        searchSimilarResources(query, userId, limit, threshold).then((resources: any) =>
           resources.map((resource: any) => ({ ...resource, type: 'resource' }))
         )
       );
@@ -246,7 +246,7 @@ export async function hybridSearch(
 
     if (includeFiles) {
       searches.push(
-        searchSimilarFiles(query, userId, limit, threshold).then(files =>
+        searchSimilarFiles(query, userId, limit, threshold).then((files: any) =>
           files.map((file: any) => ({ ...file, type: 'file' }))
         )
       );

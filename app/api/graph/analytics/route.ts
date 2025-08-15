@@ -39,12 +39,54 @@ export async function GET(request: NextRequest) {
       noteAreaConnections,
       noteResourceConnections,
     ] = await Promise.all([
-      prisma.project.count({ where: { userId, areaId: { not: null } } }),
-      prisma.resource.count({ where: { userId, projectId: { not: null } } }),
-      prisma.resource.count({ where: { userId, areaId: { not: null } } }),
-      prisma.note.count({ where: { userId, projectId: { not: null } } }),
-      prisma.note.count({ where: { userId, areaId: { not: null } } }),
-      prisma.note.count({ where: { userId, resourceId: { not: null } } }),
+      prisma.project.count({
+        where: {
+          userId,
+          areas: {
+            some: {}
+          }
+        }
+      }),
+      prisma.resource.count({
+        where: {
+          userId,
+          projects: {
+            some: {}
+          }
+        }
+      }),
+      prisma.resource.count({
+        where: {
+          userId,
+          areas: {
+            some: {}
+          }
+        }
+      }),
+      prisma.note.count({
+        where: {
+          userId,
+          projects: {
+            some: {}
+          }
+        }
+      }),
+      prisma.note.count({
+        where: {
+          userId,
+          areas: {
+            some: {}
+          }
+        }
+      }),
+      prisma.note.count({
+        where: {
+          userId,
+          resources: {
+            some: {}
+          }
+        }
+      }),
     ]);
 
     // Calculate connectivity metrics

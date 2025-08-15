@@ -9,7 +9,6 @@ import { useState, useCallback } from 'react';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { notifications } from '@mantine/notifications';
-import { IconCheck, IconAlertCircle } from '@tabler/icons-react';
 
 interface SignInData {
   email: string;
@@ -38,7 +37,6 @@ interface UseAuthReturn {
   
   // Utilities
   hasRole: (role: string) => boolean;
-  hasPermission: (permission: string) => boolean;
 }
 
 export function useAuth(): UseAuthReturn {
@@ -65,7 +63,6 @@ export function useAuth(): UseAuthReturn {
           title: 'Sign In Failed',
           message: 'Invalid email or password. Please check your credentials.',
           color: 'red',
-          icon: <IconAlertCircle size="1rem" />,
         });
         return false;
       }
@@ -75,7 +72,6 @@ export function useAuth(): UseAuthReturn {
           title: 'Welcome back!',
           message: 'You have been successfully signed in.',
           color: 'green',
-          icon: <IconCheck size="1rem" />,
         });
         return true;
       }
@@ -87,7 +83,6 @@ export function useAuth(): UseAuthReturn {
         title: 'Error',
         message: 'An unexpected error occurred. Please try again.',
         color: 'red',
-        icon: <IconAlertCircle size="1rem" />,
       });
       return false;
     } finally {
@@ -115,7 +110,6 @@ export function useAuth(): UseAuthReturn {
           title: 'Registration Failed',
           message: result.error || 'Please check your information and try again.',
           color: 'red',
-          icon: <IconAlertCircle size="1rem" />,
         });
         return false;
       }
@@ -124,7 +118,6 @@ export function useAuth(): UseAuthReturn {
         title: 'Account Created!',
         message: 'Your account has been created successfully. Please sign in.',
         color: 'green',
-        icon: <IconCheck size="1rem" />,
       });
 
       // Redirect to sign in page
@@ -136,7 +129,6 @@ export function useAuth(): UseAuthReturn {
         title: 'Error',
         message: 'An unexpected error occurred. Please try again.',
         color: 'red',
-        icon: <IconAlertCircle size="1rem" />,
       });
       return false;
     } finally {
@@ -158,7 +150,6 @@ export function useAuth(): UseAuthReturn {
         title: 'Signed Out',
         message: 'You have been successfully signed out.',
         color: 'blue',
-        icon: <IconCheck size="1rem" />,
       });
     } catch (error) {
       console.error('Sign out error:', error);
@@ -166,7 +157,6 @@ export function useAuth(): UseAuthReturn {
         title: 'Error',
         message: 'An error occurred while signing out.',
         color: 'red',
-        icon: <IconAlertCircle size="1rem" />,
       });
     } finally {
       setIsLoading(false);
@@ -185,11 +175,6 @@ export function useAuth(): UseAuthReturn {
     return userRoleIndex >= requiredRoleIndex;
   }, [user]);
 
-  // Check if user has specific permission
-  const hasPermission = useCallback((permission: string): boolean => {
-    if (!user?.permissions) return false;
-    return user.permissions.includes(permission);
-  }, [user]);
 
   return {
     isLoading: isLoading || status === 'loading',
@@ -199,6 +184,5 @@ export function useAuth(): UseAuthReturn {
     signUpWithCredentials,
     signOutUser,
     hasRole,
-    hasPermission,
   };
 }

@@ -21,9 +21,9 @@ const createChatSchema = z.object({
   description: z.string()
     .max(500, 'Description must be less than 500 characters')
     .optional(),
-  projectId: z.string().uuid().optional(),
-  areaId: z.string().uuid().optional(),
-  resourceId: z.string().uuid().optional(),
+  projectId: z.string().cuid().optional(),
+  areaId: z.string().cuid().optional(),
+  resourceId: z.string().cuid().optional(),
   metadata: z.record(z.any()).optional(),
 });
 

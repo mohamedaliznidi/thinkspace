@@ -47,6 +47,8 @@ model User {
   areas     Area[]
   resources Resource[]
   notes     Note[]
+  tasks     Task[]
+  projectTemplates ProjectTemplate[]
 
   // Chat and AI Relations
   chats     Chat[]
@@ -76,6 +78,7 @@ model Note {
   id              String   @id @default(cuid())
   title           String
   content         String
+  isPinned        Boolean  @default(false)
   type            NoteType @default(QUICK)
 
   // Vector embedding for semantic search
@@ -161,6 +164,13 @@ model Project {
   // Activity Relations
   activities  Activity[]
 
+  // Task Relations
+  tasks       Task[]
+
+  // Template Relations
+  templateId  String?
+  template    ProjectTemplate?    @relation("ProjectTemplate", fields: [templateId], references: [id])
+
   // Timestamps
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -169,6 +179,108 @@ model Project {
   @@index([userId, status])
   @@index([dueDate])
   @@index([priority])
+}
+
+// =============================================================================
+// TASK MANAGEMENT
+// =============================================================================
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  status      TaskStatus @default(TODO)
+  priority    TaskPriority @default(MEDIUM)
+
+  // Task details
+  dueDate     DateTime?
+  startDate   DateTime?
+  completedAt DateTime?
+
+  // Time tracking
+  estimatedHours Float?
+  actualHours    Float?
+
+  // Task organization
+  order       Int        @default(0)
+
+  // Metadata
+  tags        String[]
+  metadata    Json?
+
+  // Relations
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId   String
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Subtask Relations
+  parentTaskId String?
+  parentTask   Task?      @relation("TaskSubtasks", fields: [parentTaskId], references: [id])
+  subtasks     Task[]     @relation("TaskSubtasks")
+
+  // Task Dependencies
+  dependsOnTasks Task[]    @relation("TaskDependencies")
+  dependentTasks Task[]    @relation("TaskDependencies")
+
+  // Activity Relations
+  activities  Activity[]
+
+  // Timestamps
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@map("tasks")
+  @@index([userId, status])
+  @@index([projectId, status])
+  @@index([dueDate])
+  @@index([priority])
+  @@index([order])
+}
+
+// =============================================================================
+// PROJECT TEMPLATES
+// =============================================================================
+
+model ProjectTemplate {
+  id          String              @id @default(cuid())
+  title       String
+  description String?
+  category    ProjectTemplateCategory @default(OTHER)
+
+  // Template content
+  projectData Json                // Project structure and settings
+  taskData    Json?               // Pre-defined tasks
+  milestones  Json?               // Pre-defined milestones
+
+  // Template metadata
+  isPublic    Boolean             @default(false)
+  isOfficial  Boolean             @default(false)
+  tags        String[]
+  metadata    Json?
+
+  // Usage statistics
+  usageCount  Int                 @default(0)
+
+  // Relations
+  userId      String
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Projects created from this template
+  projects    Project[]           @relation("ProjectTemplate")
+
+  // Activity Relations
+  activities  Activity[]
+
+  // Timestamps
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@map("project_templates")
+  @@index([userId, category])
+  @@index([isPublic, isOfficial])
+  @@index([usageCount])
 }
 
 // =============================================================================
@@ -440,6 +552,10 @@ model Activity {
   note        Note?        @relation(fields: [noteId], references: [id])
   fileId      String?
   file        File?        @relation(fields: [fileId], references: [id])
+  taskId      String?
+  task        Task?        @relation(fields: [taskId], references: [id])
+  templateId  String?
+  template    ProjectTemplate? @relation(fields: [templateId], references: [id])
 
   // Timestamps
   createdAt   DateTime     @default(now())
@@ -519,6 +635,36 @@ enum ProjectPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  BLOCKED
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ProjectTemplateCategory {
+  SOFTWARE_DEVELOPMENT
+  MARKETING
+  DESIGN
+  RESEARCH
+  EVENT_PLANNING
+  PRODUCT_LAUNCH
+  CONTENT_CREATION
+  BUSINESS_PLANNING
+  EDUCATION
+  PERSONAL
+  OTHER
 }
 
 enum AreaType {

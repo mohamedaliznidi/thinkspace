@@ -303,13 +303,13 @@ export const theme = createTheme({
 
 // Export theme-related utilities
 export const getParaColor = (type: 'projects' | 'areas' | 'resources' | 'archive'): string => {
-  return theme.other.paraColors[type];
+  return theme.other?.paraColors[type];
 };
 
 export const getGraphColor = (type: 'node' | 'edge' | 'highlight' | 'cluster'): string => {
-  return theme.other.graphColors[type];
+  return theme.other?.graphColors[type];
 };
 
 export const getChatColor = (type: 'user' | 'assistant' | 'system' | 'background'): string => {
-  return theme.other.chatColors[type];
+  return theme.other?.chatColors[type];
 };

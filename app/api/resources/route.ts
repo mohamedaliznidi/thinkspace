@@ -26,8 +26,8 @@ const createResourceSchema = z.object({
   sourceUrl: z.string().url().optional(),
   filePath: z.string().optional(),
   contentExtract: z.string().optional(),
-  projectIds: z.array(z.string().uuid()).default([]), // Many-to-many relationship
-  areaIds: z.array(z.string().uuid()).default([]), // Many-to-many relationship
+  projectIds: z.array(z.string().cuid()).default([]), // Many-to-many relationship
+  areaIds: z.array(z.string().cuid()).default([]), // Many-to-many relationship
   tags: z.array(z.string()).default([]),
   metadata: z.record(z.any()).optional(),
 });
@@ -167,15 +167,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createResourceSchema.parse(body);
 
-    // Generate embedding for semantic search
-    const embeddingText = [
-      validatedData.title,
-      validatedData.description || '',
-      validatedData.contentExtract || '',
-    ].filter(Boolean).join(' ');
-
-    const embedding = await generateEmbedding(embeddingText);
-
     // Prepare data for creation (exclude relationship arrays)
     const { projectIds, areaIds, ...resourceData } = validatedData;
 
@@ -184,7 +175,6 @@ export async function POST(request: NextRequest) {
       data: {
         ...resourceData,
         userId: session.user.id,
-        embedding,
         // Connect to projects if provided
         ...(projectIds.length > 0 && {
           projects: {

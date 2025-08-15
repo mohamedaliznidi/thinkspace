@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     const userId = session.user.id;
 
-    // Get all nodes (projects, areas, resources, notes)
+    // Get all nodes (projects, areas, resources, notes) with their relationships
     const [projects, areas, resources, notes] = await Promise.all([
       prisma.project.findMany({
         where: { userId },
@@ -36,8 +36,12 @@ export async function GET(request: NextRequest) {
           title: true,
           status: true,
           priority: true,
-          areaId: true,
           createdAt: true,
+          areas: {
+            select: {
+              id: true,
+            },
+          },
         },
       }),
       prisma.area.findMany({
@@ -57,9 +61,17 @@ export async function GET(request: NextRequest) {
           id: true,
           title: true,
           type: true,
-          projectId: true,
-          areaId: true,
           createdAt: true,
+          projects: {
+            select: {
+              id: true,
+            },
+          },
+          areas: {
+            select: {
+              id: true,
+            },
+          },
         },
       }),
       prisma.note.findMany({
@@ -68,10 +80,22 @@ export async function GET(request: NextRequest) {
           id: true,
           title: true,
           type: true,
-          projectId: true,
-          areaId: true,
-          resourceId: true,
           createdAt: true,
+          projects: {
+            select: {
+              id: true,
+            },
+          },
+          areas: {
+            select: {
+              id: true,
+            },
+          },
+          resources: {
+            select: {
+              id: true,
+            },
+          },
         },
       }),
     ]);
@@ -118,72 +142,78 @@ export async function GET(request: NextRequest) {
     ];
 
     // Create edges based on relationships
-    const edges = [];
+    const edges: Array<{
+      id: string;
+      from: string;
+      to: string;
+      type: string;
+      label: string;
+    }> = [];
 
     // Project -> Area relationships
     projects.forEach(project => {
-      if (project.areaId) {
+      project.areas.forEach(area => {
         edges.push({
-          id: `${project.id}-${project.areaId}`,
+          id: `${project.id}-${area.id}`,
           from: project.id,
-          to: project.areaId,
+          to: area.id,
           type: 'belongs_to',
           label: 'belongs to',
         });
-      }
+      });
     });
 
     // Resource -> Project/Area relationships
     resources.forEach(resource => {
-      if (resource.projectId) {
+      resource.projects.forEach(project => {
         edges.push({
-          id: `${resource.id}-${resource.projectId}`,
+          id: `${resource.id}-${project.id}`,
           from: resource.id,
-          to: resource.projectId,
+          to: project.id,
           type: 'supports',
           label: 'supports',
         });
-      }
-      if (resource.areaId) {
+      });
+      resource.areas.forEach(area => {
         edges.push({
-          id: `${resource.id}-${resource.areaId}`,
+          id: `${resource.id}-${area.id}`,
           from: resource.id,
-          to: resource.areaId,
+          to: area.id,
           type: 'relates_to',
           label: 'relates to',
         });
-      }
+      });
     });
 
     // Note relationships
     notes.forEach(note => {
-      if (note.projectId) {
+      note.projects.forEach(project => {
         edges.push({
-          id: `${note.id}-${note.projectId}`,
+          id: `${note.id}-${project.id}`,
           from: note.id,
-          to: note.projectId,
+          to: project.id,
           type: 'documents',
           label: 'documents',
         });
-      }
-      if (note.areaId) {
+      });
+      note.areas.forEach(area => {
         edges.push({
-          id: `${note.id}-${note.areaId}`,
+          id: `${note.id}-${area.id}`,
           from: note.id,
-          to: note.areaId,
+          to: area.id,
           type: 'notes_on',
           label: 'notes on',
         });
-      }
-      if (note.resourceId) {
+      });
+      note.resources.forEach(resource => {
         edges.push({
-          id: `${note.id}-${note.resourceId}`,
+          id: `${note.id}-${resource.id}`,
           from: note.id,
-          to: note.resourceId,
+          to: resource.id,
           type: 'annotates',
           label: 'annotates',
         });
-      }
+      });
     });
 
     // Filter based on type and nodeId if specified
@@ -266,14 +296,70 @@ export async function POST(request: NextRequest) {
       throw new AppError('Missing required fields: fromId, toId, relationshipType', 400);
     }
 
-    // This would typically create relationships in Neo4j
-    // For now, we'll simulate by updating the database relationships
-    
+    // Create relationships using the many-to-many connections
+    // Note: This is a simplified implementation. In a real app, you'd want to
+    // validate the relationship types and handle different connection types
+
     // Example: If creating a project -> area relationship
     if (relationshipType === 'belongs_to') {
+      // Connect project to area
       await prisma.project.update({
         where: { id: fromId, userId: session.user.id },
-        data: { areaId: toId },
+        data: {
+          areas: {
+            connect: { id: toId },
+          },
+        },
+      });
+    } else if (relationshipType === 'supports') {
+      // Connect resource to project
+      await prisma.resource.update({
+        where: { id: fromId, userId: session.user.id },
+        data: {
+          projects: {
+            connect: { id: toId },
+          },
+        },
+      });
+    } else if (relationshipType === 'relates_to') {
+      // Connect resource to area
+      await prisma.resource.update({
+        where: { id: fromId, userId: session.user.id },
+        data: {
+          areas: {
+            connect: { id: toId },
+          },
+        },
+      });
+    } else if (relationshipType === 'documents') {
+      // Connect note to project
+      await prisma.note.update({
+        where: { id: fromId, userId: session.user.id },
+        data: {
+          projects: {
+            connect: { id: toId },
+          },
+        },
+      });
+    } else if (relationshipType === 'notes_on') {
+      // Connect note to area
+      await prisma.note.update({
+        where: { id: fromId, userId: session.user.id },
+        data: {
+          areas: {
+            connect: { id: toId },
+          },
+        },
+      });
+    } else if (relationshipType === 'annotates') {
+      // Connect note to resource
+      await prisma.note.update({
+        where: { id: fromId, userId: session.user.id },
+        data: {
+          resources: {
+            connect: { id: toId },
+          },
+        },
       });
     }
 

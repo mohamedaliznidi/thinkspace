@@ -295,9 +295,18 @@ export default function ResourcesPage() {
                         )}
                       </Group>
                       
-                      <Text fw={600} size="sm" lineClamp={2}>
-                        {resource.title}
-                      </Text>
+                      <Anchor
+                        component={Link}
+                        href={`/resources/${resource.id}`}
+                        fw={600}
+                        size="sm"
+                        c="dark"
+                        style={{ textDecoration: 'none' }}
+                      >
+                        <Text fw={600} size="sm" lineClamp={2}>
+                          {resource.title}
+                        </Text>
+                      </Anchor>
                       
                       {resource.description && (
                         <Text size="xs" c="dimmed" lineClamp={2}>

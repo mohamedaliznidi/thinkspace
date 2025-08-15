@@ -30,7 +30,7 @@ const updateProjectSchema = z.object({
   status: z.enum(['ACTIVE', 'COMPLETED', 'ON_HOLD', 'CANCELLED']).optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
   dueDate: z.string().datetime().optional().nullable(),
-  areaId: z.string().uuid().optional().nullable(),
+  areaId: z.string().cuid().optional().nullable(),
   tags: z.array(z.string()).optional(),
   metadata: z.record(z.any()).optional(),
   progress: z.number().min(0).max(100).optional(),
@@ -49,6 +49,7 @@ export async function GET(
     }
 
     const { projectId } = await params;
+    console.log("🚀 ~ GET ~ projectId:", projectId)
 
     if (!projectId) {
       throw new AppError('Project ID is required', 400);
@@ -60,7 +61,7 @@ export async function GET(
         userId: session.user.id,
       },
       include: {
-        area: {
+        areas: {
           select: {
             id: true,
             title: true,
@@ -87,23 +88,6 @@ export async function GET(
             title: true,
             description: true,
             type: true,
-            url: true,
-            fileType: true,
-            fileSize: true,
-            createdAt: true,
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
-        tasks: {
-          select: {
-            id: true,
-            title: true,
-            description: true,
-            status: true,
-            priority: true,
-            dueDate: true,
             createdAt: true,
           },
           orderBy: {
@@ -114,7 +98,6 @@ export async function GET(
           select: {
             notes: true,
             resources: true,
-            tasks: true,
           },
         },
       },
@@ -168,24 +151,17 @@ export async function PUT(
       throw new AppError('Project not found', 404);
     }
 
-    // Generate new embedding if title or description changed
-    let embedding = existingProject.embedding;
-    if (validatedData.title || validatedData.description) {
-      const title = validatedData.title || existingProject.title;
-      const description = validatedData.description || existingProject.description || '';
-      embedding = await generateEmbedding(`${title} ${description}`);
-    }
+   
 
     // Update project
     const updatedProject = await prisma.project.update({
       where: { id: projectId },
       data: {
         ...validatedData,
-        embedding,
         dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : validatedData.dueDate,
       },
       include: {
-        area: {
+        areas: {
           select: {
             id: true,
             title: true,
@@ -196,7 +172,6 @@ export async function PUT(
           select: {
             notes: true,
             resources: true,
-            tasks: true,
           },
         },
       },

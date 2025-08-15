@@ -23,10 +23,10 @@ const createProjectSchema = z.object({
     .optional(),
   status: z.enum(['PLANNING', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED', 'ARCHIVED']).default('PLANNING'),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).default('MEDIUM'),
-  startDate: z.string().datetime().optional(),
-  dueDate: z.string().datetime().optional(),
-  areaIds: z.array(z.string().uuid()).default([]), // Many-to-many relationship
-  resourceIds: z.array(z.string().uuid()).default([]), // Many-to-many relationship
+  startDate: z.string().date().optional(),
+  dueDate: z.string().date().optional(),
+  areaIds: z.array(z.string().cuid()).default([]), // Many-to-many relationship
+  resourceIds: z.array(z.string().cuid()).default([]), // Many-to-many relationship
   tags: z.array(z.string()).default([]),
   metadata: z.record(z.any()).optional(),
 });

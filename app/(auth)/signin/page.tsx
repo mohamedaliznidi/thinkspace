@@ -1,13 +1,13 @@
 /**
  * Sign In Page for ThinkSpace
- * 
+ *
  * This page provides user authentication functionality with email/password
  * login, form validation, error handling, and integration with NextAuth.js.
  */
 
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { signIn, getSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -21,7 +21,9 @@ import {
   Checkbox,
   Group,
   Title,
-  Text
+  Text,
+  Loader,
+  Center
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
@@ -34,7 +36,7 @@ interface SignInFormData {
   remember: boolean;
 }
 
-export default function SignInPage() {
+function SignInContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -191,5 +193,26 @@ export default function SignInPage() {
         </Anchor>
       </Group>
     </Stack>
+  );
+}
+
+function SignInLoading() {
+  return (
+    <Center h="400px">
+      <Stack align="center" gap="md">
+        <Loader size="lg" />
+        <Text c="dimmed" size="sm">
+          Loading sign in form...
+        </Text>
+      </Stack>
+    </Center>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<SignInLoading />}>
+      <SignInContent />
+    </Suspense>
   );
 }

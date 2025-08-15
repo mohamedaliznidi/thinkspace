@@ -23,9 +23,9 @@ const createNoteSchema = z.object({
     .min(1, 'Content is required'),
   type: z.enum(['FLEETING', 'LITERATURE', 'PERMANENT', 'PROJECT', 'MEETING']).default('FLEETING'),
   isPinned: z.boolean().default(false),
-  projectId: z.string().uuid().optional(),
-  areaId: z.string().uuid().optional(),
-  resourceId: z.string().uuid().optional(),
+  projectId: z.string().cuid().optional(),
+  areaId: z.string().cuid().optional(),
+  resourceId: z.string().cuid().optional(),
   tags: z.array(z.string()).default([]),
   metadata: z.record(z.any()).optional(),
 });
@@ -76,21 +76,21 @@ export async function GET(request: NextRequest) {
       prisma.note.findMany({
         where,
         include: {
-          project: {
+          projects: {
             select: {
               id: true,
               title: true,
               status: true,
             },
           },
-          area: {
+          areas: {
             select: {
               id: true,
               title: true,
               color: true,
             },
           },
-          resource: {
+          resources: {
             select: {
               id: true,
               title: true,
@@ -99,7 +99,6 @@ export async function GET(request: NextRequest) {
           },
         },
         orderBy: [
-          { isPinned: 'desc' }, // Pinned notes first
           { [sortBy]: sortOrder },
         ],
         skip,
@@ -148,37 +147,30 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createNoteSchema.parse(body);
 
-    // Generate embedding for semantic search
-    const embeddingText = [
-      validatedData.title,
-      validatedData.content.replace(/<[^>]*>/g, ''), // Strip HTML tags
-    ].join(' ');
-    
-    const embedding = await generateEmbedding(embeddingText);
 
     // Create note
     const note = await prisma.note.create({
       data: {
         ...validatedData,
+        ...(validatedData.type && { type: validatedData.type as any }), // Explicit cast for Prisma enum
         userId: session.user.id,
-        embedding,
       },
       include: {
-        project: {
+        projects: {
           select: {
             id: true,
             title: true,
             status: true,
           },
         },
-        area: {
+        areas: {
           select: {
             id: true,
             title: true,
             color: true,
           },
         },
-        resource: {
+        resources: {
           select: {
             id: true,
             title: true,

@@ -114,25 +114,18 @@ export async function POST(request: NextRequest) {
         description: description || undefined,
         type: resourceType as any,
         filePath: `/uploads/${fileName}`,
-        fileName: file.name,
-        fileType: file.type,
-        fileSize: file.size,
-        content: extractedContent || undefined,
         userId: session.user.id,
-        projectId: projectId || undefined,
-        areaId: areaId || undefined,
         tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
-        embedding,
       },
       include: {
-        project: {
+        projects: {
           select: {
             id: true,
             title: true,
             status: true,
           },
         },
-        area: {
+        areas: {
           select: {
             id: true,
             title: true,
@@ -198,14 +191,14 @@ export async function GET(request: NextRequest) {
       prisma.resource.findMany({
         where,
         include: {
-          project: {
+          projects: {
             select: {
               id: true,
               title: true,
               status: true,
             },
           },
-          area: {
+          areas: {
             select: {
               id: true,
               title: true,

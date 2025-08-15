@@ -29,6 +29,7 @@ import {
   Grid,
   Tooltip,
   Box,
+  Anchor,
 } from '@mantine/core';
 import {
   IconPlus,
@@ -300,9 +301,18 @@ export default function NotesPage() {
                         )}
                       </Group>
                       
-                      <Text fw={600} size="sm" lineClamp={2}>
-                        {note.title}
-                      </Text>
+                      <Anchor
+                        component={Link}
+                        href={`/notes/${note.id}`}
+                        fw={600}
+                        size="sm"
+                        c="dark"
+                        style={{ textDecoration: 'none' }}
+                      >
+                        <Text fw={600} size="sm" lineClamp={2}>
+                          {note.title}
+                        </Text>
+                      </Anchor>
                       
                       <Text size="xs" c="dimmed" lineClamp={4}>
                         {stripHtml(note.content)}

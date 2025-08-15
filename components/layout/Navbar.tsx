@@ -196,8 +196,8 @@ export function Navbar() {
     return (
       <div key={item.href}>
         <NavLink
-          component={hasChildren ? 'button' : Link}
-          href={hasChildren ? undefined : item.href}
+          component={hasChildren ? "button" : undefined}
+          {...(!hasChildren ? { href: item.href } : {})}
           label={
             <Group justify="space-between" gap="xs">
               <Text size="sm" fw={active ? 600 : 400}>
@@ -250,7 +250,7 @@ export function Navbar() {
         {/* Dashboard */}
         <NavLink
           component={Link}
-          href="/dashboard"
+          href="/"
           label="Dashboard"
           leftSection={<IconDashboard size="1.1rem" />}
           active={pathname === '/'}

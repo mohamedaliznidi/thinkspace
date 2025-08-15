@@ -1,13 +1,13 @@
 /**
  * Reset Password Page for ThinkSpace
- * 
+ *
  * This page provides password reset functionality with token validation
  * and new password setting.
  */
 
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   PasswordInput,
@@ -18,7 +18,9 @@ import {
   Title,
   Text,
   Group,
-  Progress
+  Progress,
+  Loader,
+  Center
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
@@ -46,7 +48,7 @@ const getPasswordStrengthColor = (strength: number): string => {
   return 'green';
 };
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -255,5 +257,26 @@ export default function ResetPasswordPage() {
         </Anchor>
       </Group>
     </Stack>
+  );
+}
+
+function ResetPasswordLoading() {
+  return (
+    <Center h="400px">
+      <Stack align="center" gap="md">
+        <Loader size="lg" />
+        <Text c="dimmed" size="sm">
+          Loading reset form...
+        </Text>
+      </Stack>
+    </Center>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<ResetPasswordLoading />}>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }

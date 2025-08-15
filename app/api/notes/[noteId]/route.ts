@@ -25,9 +25,9 @@ const updateNoteSchema = z.object({
     .optional(),
   type: z.enum(['FLEETING', 'LITERATURE', 'PERMANENT', 'PROJECT', 'MEETING']).optional(),
   isPinned: z.boolean().optional(),
-  projectId: z.string().uuid().optional().nullable(),
-  areaId: z.string().uuid().optional().nullable(),
-  resourceId: z.string().uuid().optional().nullable(),
+  projectId: z.string().cuid().optional().nullable(),
+  areaId: z.string().cuid().optional().nullable(),
+  resourceId: z.string().cuid().optional().nullable(),
   tags: z.array(z.string()).optional(),
   metadata: z.record(z.any()).optional(),
 });
@@ -45,7 +45,7 @@ export async function GET(
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
-      throw new AppError('Authentication required', 'UNAUTHORIZED', 401);
+      throw new AppError('Authentication required', 401);
     }
 
     const { noteId } = await params;
@@ -56,7 +56,7 @@ export async function GET(
         userId: session.user.id,
       },
       include: {
-        project: {
+        projects: {
           select: {
             id: true,
             title: true,
@@ -64,7 +64,7 @@ export async function GET(
             description: true,
           },
         },
-        area: {
+        areas: {
           select: {
             id: true,
             title: true,
@@ -72,12 +72,11 @@ export async function GET(
             description: true,
           },
         },
-        resource: {
+        resources: {
           select: {
             id: true,
             title: true,
             type: true,
-            url: true,
             description: true,
           },
         },
@@ -85,7 +84,7 @@ export async function GET(
     });
 
     if (!note) {
-      throw new AppError('Note not found', 'NOTE_NOT_FOUND', 404);
+      throw new AppError('Note not found', 404);
     }
 
     return NextResponse.json({
@@ -113,7 +112,7 @@ export async function PUT(
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
-      throw new AppError('Authentication required', 'UNAUTHORIZED', 401);
+      throw new AppError('Authentication required', 401);
     }
 
     const { noteId } = await params;
@@ -129,41 +128,34 @@ export async function PUT(
     });
 
     if (!existingNote) {
-      throw new AppError('Note not found', 'NOTE_NOT_FOUND', 404);
+      throw new AppError('Note not found', 404);
     }
 
-    // Generate new embedding if title or content changed
-    let embedding = existingNote.embedding;
-    if (validatedData.title || validatedData.content) {
-      const title = validatedData.title || existingNote.title;
-      const content = validatedData.content || existingNote.content;
-      const embeddingText = `${title} ${content.replace(/<[^>]*>/g, '')}`;
-      embedding = await generateEmbedding(embeddingText);
-    }
+
 
     // Update note
     const updatedNote = await prisma.note.update({
       where: { id: noteId },
       data: {
         ...validatedData,
-        embedding,
+        ...(validatedData.type && { type: validatedData.type as any }), // Explicit cast for Prisma enum
       },
       include: {
-        project: {
+        projects: {
           select: {
             id: true,
             title: true,
             status: true,
           },
         },
-        area: {
+        areas: {
           select: {
             id: true,
             title: true,
             color: true,
           },
         },
-        resource: {
+        resources: {
           select: {
             id: true,
             title: true,
@@ -218,7 +210,7 @@ export async function DELETE(
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.id) {
-      throw new AppError('Authentication required', 'UNAUTHORIZED', 401);
+      throw new AppError('Authentication required', 401);
     }
 
     const { noteId } = await params;
@@ -232,7 +224,7 @@ export async function DELETE(
     });
 
     if (!existingNote) {
-      throw new AppError('Note not found', 'NOTE_NOT_FOUND', 404);
+      throw new AppError('Note not found', 404);
     }
 
     // Delete note
