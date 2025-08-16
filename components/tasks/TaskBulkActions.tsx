@@ -30,19 +30,12 @@ import {
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-
-interface Task {
-  id: string;
-  title: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'BLOCKED' | 'COMPLETED' | 'CANCELLED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  tags: string[];
-}
+import type { TaskBulkData, TaskStatus, TaskPriority } from '@/types';
 
 interface TaskBulkActionsProps {
-  selectedTasks: Task[];
-  onBulkStatusChange: (taskIds: string[], status: Task['status']) => Promise<void>;
-  onBulkPriorityChange: (taskIds: string[], priority: Task['priority']) => Promise<void>;
+  selectedTasks: TaskBulkData[];
+  onBulkStatusChange: (taskIds: string[], status: TaskStatus) => Promise<void>;
+  onBulkPriorityChange: (taskIds: string[], priority: TaskPriority) => Promise<void>;
   onBulkDelete: (taskIds: string[]) => Promise<void>;
   onClearSelection: () => void;
 }
@@ -86,7 +79,7 @@ export function TaskBulkActions({
     }
   };
 
-  const handleStatusChange = (status: Task['status']) => {
+  const handleStatusChange = (status: TaskStatus) => {
     const taskIds = selectedTasks.map(task => task.id);
     handleBulkAction(
       () => onBulkStatusChange(taskIds, status),
@@ -95,7 +88,7 @@ export function TaskBulkActions({
     );
   };
 
-  const handlePriorityChange = (priority: Task['priority']) => {
+  const handlePriorityChange = (priority: TaskPriority) => {
     const taskIds = selectedTasks.map(task => task.id);
     handleBulkAction(
       () => onBulkPriorityChange(taskIds, priority),
@@ -222,7 +215,7 @@ export function TaskBulkActions({
             {['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'BLOCKED', 'COMPLETED', 'CANCELLED'].map((status) => (
               <Menu.Item
                 key={status}
-                onClick={() => handleStatusChange(status as Task['status'])}
+                onClick={() => handleStatusChange(status as TaskStatus)}
                 disabled={uniqueStatuses.length === 1 && uniqueStatuses[0] === status}
               >
                 {status.replace('_', ' ')}
@@ -234,7 +227,7 @@ export function TaskBulkActions({
             {['LOW', 'MEDIUM', 'HIGH', 'URGENT'].map((priority) => (
               <Menu.Item
                 key={priority}
-                onClick={() => handlePriorityChange(priority as Task['priority'])}
+                onClick={() => handlePriorityChange(priority as TaskPriority)}
                 disabled={uniquePriorities.length === 1 && uniquePriorities[0] === priority}
                 leftSection={<IconFlag size="0.875rem" />}
               >

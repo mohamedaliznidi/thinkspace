@@ -31,37 +31,15 @@ import {
   IconClock,
   IconFlag,
 } from '@tabler/icons-react';
-
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'BLOCKED' | 'COMPLETED' | 'CANCELLED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  projectId: string;
-  parentTaskId?: string;
-  dueDate?: Date;
-  startDate?: Date;
-  estimatedHours?: number;
-  actualHours?: number;
-  order: number;
-  tags: string[];
-  metadata?: Record<string, any>;
-}
-
-interface Project {
-  id: string;
-  title: string;
-  status: string;
-}
+import type { TaskDisplay, TaskFormData, TaskStatus, TaskPriority } from '@/types';
 
 interface TaskFormProps {
-  task?: Task;
+  task?: TaskDisplay;
   projectId?: string;
   parentTaskId?: string;
-  projects: Project[];
-  availableParentTasks?: { id: string; title: string }[];
-  onSubmit: (data: Partial<Task>) => Promise<void>;
+  projects: Array<{ id: string; title: string; status: string }>;
+  availableParentTasks?: Array<{ id: string; title: string }>;
+  onSubmit: (data: TaskFormData) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
 }
@@ -120,11 +98,11 @@ export function TaskForm({
     try {
       setSubmitting(true);
 
-      const submitData: Partial<Task> = {
+      const submitData: TaskFormData = {
         title: values.title.trim(),
         description: values.description?.trim() || undefined,
-        status: values.status as Task['status'],
-        priority: values.priority as Task['priority'],
+        status: values.status as TaskStatus,
+        priority: values.priority as TaskPriority,
         projectId: values.projectId,
         parentTaskId: values.parentTaskId || undefined,
         dueDate: values.dueDate ? new Date(values.dueDate.toString()) : undefined,

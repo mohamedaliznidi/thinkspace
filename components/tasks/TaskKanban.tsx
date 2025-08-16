@@ -28,57 +28,22 @@ import {
   IconAlertTriangle,
 } from '@tabler/icons-react';
 import { TaskCard } from './TaskCard';
-
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'BLOCKED' | 'COMPLETED' | 'CANCELLED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  dueDate?: string;
-  startDate?: string;
-  completedAt?: string;
-  estimatedHours?: number;
-  actualHours?: number;
-  order: number;
-  tags: string[];
-  project: {
-    id: string;
-    title: string;
-    status: string;
-  };
-  parentTask?: {
-    id: string;
-    title: string;
-  };
-  subtasks?: {
-    id: string;
-    title: string;
-    status: string;
-    completedAt?: string;
-  }[];
-  _count: {
-    subtasks: number;
-    activities: number;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
+import type { TaskDisplay, TaskStatus } from '@/types';
 
 interface TaskKanbanProps {
-  tasks: Task[];
+  tasks: TaskDisplay[];
   loading?: boolean;
   error?: string;
-  onTaskCreate?: (status?: Task['status']) => void;
-  onTaskEdit?: (task: Task) => void;
-  onTaskDelete?: (task: Task) => void;
-  onTaskStatusChange?: (taskId: string, status: Task['status']) => void;
-  onTaskFocus?: (task: Task | null) => void;
+  onTaskCreate?: (status?: TaskStatus) => void;
+  onTaskEdit?: (task: TaskDisplay) => void;
+  onTaskDelete?: (task: TaskDisplay) => void;
+  onTaskStatusChange?: (taskId: string, status: TaskStatus) => void;
+  onTaskFocus?: (task: TaskDisplay | null) => void;
   showProject?: boolean;
 }
 
 interface StatusColumn {
-  key: Task['status'];
+  key: TaskStatus;
   title: string;
   color: string;
   description: string;
@@ -95,7 +60,7 @@ export function TaskKanban({
   onTaskFocus,
   showProject = true,
 }: TaskKanbanProps) {
-  const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+  const [draggedTask, setDraggedTask] = useState<TaskDisplay | null>(null);
   const { colorScheme } = useMantineColorScheme();
 
   // Function to get column-specific drop zone background color with opacity
@@ -151,13 +116,13 @@ export function TaskKanban({
     },
   ];
 
-  const getTasksByStatus = (status: Task['status']) => {
+  const getTasksByStatus = (status: TaskStatus) => {
     return tasks
       .filter(task => task.status === status)
       .sort((a, b) => a.order - b.order);
   };
 
-  const handleDragStart = (task: Task) => {
+  const handleDragStart = (task: TaskDisplay) => {
     setDraggedTask(task);
   };
 
@@ -169,7 +134,7 @@ export function TaskKanban({
     e.preventDefault();
   };
 
-  const handleDrop = (e: React.DragEvent, newStatus: Task['status']) => {
+  const handleDrop = (e: React.DragEvent, newStatus: TaskStatus) => {
     e.preventDefault();
     
     if (draggedTask && draggedTask.status !== newStatus && onTaskStatusChange) {

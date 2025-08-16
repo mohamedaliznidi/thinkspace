@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { AppError, handleApiError } from '@/lib/utils';
+import { TASK_STATUS_VALUES, TASK_PRIORITY_VALUES } from '@/types';
 
 interface RouteParams {
   params: Promise<{ taskId: string }>;
@@ -26,8 +27,8 @@ const updateTaskSchema = z.object({
   description: z.string()
     .max(1000, 'Description must be less than 1000 characters')
     .optional(),
-  status: z.enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'BLOCKED', 'COMPLETED', 'CANCELLED']).optional(),
-  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
+  status: z.enum(TASK_STATUS_VALUES).optional(),
+  priority: z.enum(TASK_PRIORITY_VALUES).optional(),
   parentTaskId: z.string().cuid().nullable().optional(),
   dueDate: z.string().datetime().nullable().optional(),
   startDate: z.string().datetime().nullable().optional(),

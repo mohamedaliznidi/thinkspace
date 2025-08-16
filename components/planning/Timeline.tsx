@@ -29,12 +29,13 @@ import {
   IconSubtask,
 } from '@tabler/icons-react';
 import { format, isToday, isTomorrow, isYesterday, isPast, isFuture } from 'date-fns';
+import type { TaskStatus, TaskPriority } from '@/types';
 
-interface Task {
+interface TaskForTimeline {
   id: string;
   title: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'BLOCKED' | 'COMPLETED' | 'CANCELLED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  status: TaskStatus;
+  priority: TaskPriority;
   dueDate?: string;
   completedAt?: string;
 }
@@ -60,10 +61,10 @@ interface Event {
 }
 
 interface TimelineProps {
-  tasks?: Task[];
+  tasks?: TaskForTimeline[];
   milestones?: Milestone[];
   events?: Event[];
-  onTaskClick?: (task: Task) => void;
+  onTaskClick?: (task: TaskForTimeline) => void;
   onMilestoneClick?: (milestone: Milestone) => void;
   onEventClick?: (event: Event) => void;
   showPastEvents?: boolean;
@@ -92,7 +93,7 @@ export function Timeline({
       status?: string;
       priority?: string;
       color?: string;
-      data: Task | Milestone | Event;
+      data: TaskForTimeline | Milestone | Event;
     }> = [];
 
     // Add tasks with due dates
@@ -195,7 +196,7 @@ export function Timeline({
   const handleItemClick = (item: typeof timelineItems[0]) => {
     switch (item.type) {
       case 'task':
-        onTaskClick?.(item.data as Task);
+        onTaskClick?.(item.data as TaskForTimeline);
         break;
       case 'milestone':
         onMilestoneClick?.(item.data as Milestone);

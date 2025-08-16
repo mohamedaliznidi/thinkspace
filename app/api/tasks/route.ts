@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { AppError, handleApiError } from '@/lib/utils';
+import { TASK_STATUS_VALUES, TASK_PRIORITY_VALUES } from '@/types';
 
 // Task validation schema
 const createTaskSchema = z.object({
@@ -21,8 +22,8 @@ const createTaskSchema = z.object({
   description: z.string()
     .max(1000, 'Description must be less than 1000 characters')
     .optional(),
-  status: z.enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'BLOCKED', 'COMPLETED', 'CANCELLED']).default('TODO'),
-  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).default('MEDIUM'),
+  status: z.enum(TASK_STATUS_VALUES).default('TODO'),
+  priority: z.enum(TASK_PRIORITY_VALUES).default('MEDIUM'),
   projectId: z.string().cuid('Invalid project ID'),
   parentTaskId: z.string().cuid().optional(),
   dueDate: z.string().datetime().optional(),

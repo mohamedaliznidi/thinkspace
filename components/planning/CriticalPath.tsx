@@ -29,31 +29,16 @@ import {
   IconTarget,
 } from '@tabler/icons-react';
 import { differenceInDays, format } from 'date-fns';
-
-interface Task {
-  id: string;
-  title: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'BLOCKED' | 'COMPLETED' | 'CANCELLED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  startDate?: string;
-  dueDate?: string;
-  completedAt?: string;
-  estimatedHours?: number;
-  dependsOnTasks?: {
-    id: string;
-    title: string;
-    completedAt?: string;
-  }[];
-}
+import type { TaskPlanningData } from '@/types';
 
 interface CriticalPathProps {
-  tasks: Task[];
+  tasks: TaskPlanningData[];
   projectStartDate?: Date;
   projectEndDate?: Date;
 }
 
 interface PathNode {
-  task: Task;
+  task: TaskPlanningData;
   earliestStart: number;
   earliestFinish: number;
   latestStart: number;
@@ -77,7 +62,7 @@ export function CriticalPath({
     const taskMap = new Map(tasks.map(task => [task.id, task]));
     
     // Calculate task durations (in days)
-    const getTaskDuration = (task: Task): number => {
+    const getTaskDuration = (task: TaskPlanningData): number => {
       if (task.startDate && task.dueDate) {
         return Math.max(1, differenceInDays(new Date(task.dueDate), new Date(task.startDate)));
       }

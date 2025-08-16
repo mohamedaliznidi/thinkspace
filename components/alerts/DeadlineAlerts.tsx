@@ -39,30 +39,11 @@ import {
   isToday,
   isTomorrow,
 } from 'date-fns';
-
-interface Task {
-  id: string;
-  title: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'BLOCKED' | 'COMPLETED' | 'CANCELLED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  dueDate?: string;
-  project: {
-    id: string;
-    title: string;
-  };
-}
-
-interface Project {
-  id: string;
-  title: string;
-  status: 'PLANNING' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'CANCELLED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  dueDate?: string;
-}
+import type { TaskDisplay, ProjectDisplay } from '@/types';
 
 interface DeadlineAlertsProps {
-  tasks: Task[];
-  projects: Project[];
+  tasks: TaskDisplay[];
+  projects: ProjectDisplay[];
   onTaskClick?: (taskId: string) => void;
   onProjectClick?: (projectId: string) => void;
   onDismissAlert?: (type: string, id: string) => void;
@@ -79,7 +60,7 @@ interface AlertItem {
   dueDate: Date;
   priority: string;
   status: string;
-  data: Task | Project;
+  data: TaskDisplay | ProjectDisplay;
 }
 
 export function DeadlineAlerts({
@@ -250,9 +231,9 @@ export function DeadlineAlerts({
 
   const handleItemClick = (alert: AlertItem) => {
     if (alert.type === 'task' && onTaskClick) {
-      onTaskClick((alert.data as Task).id);
+      onTaskClick((alert.data as TaskDisplay).id);
     } else if (alert.type === 'project' && onProjectClick) {
-      onProjectClick((alert.data as Project).id);
+      onProjectClick((alert.data as ProjectDisplay).id);
     }
   };
 
@@ -306,7 +287,7 @@ export function DeadlineAlerts({
                       </Badge>
                       {alert.type === 'task' && (
                         <Badge size="xs" variant="outline" color="gray">
-                          {(alert.data as Task).project.title}
+                          {(alert.data as TaskDisplay).project.title}
                         </Badge>
                       )}
                     </Group>

@@ -9,25 +9,26 @@
 
 import { useEffect, useCallback } from 'react';
 import { useHotkeys } from '@mantine/hooks';
+import type { TaskStatus } from '@/types';
 
-interface Task {
+interface TaskForKeyboardShortcuts {
   id: string;
   title: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'BLOCKED' | 'COMPLETED' | 'CANCELLED';
+  status: TaskStatus;
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 }
 
 interface UseTaskKeyboardShortcutsProps {
   onTaskCreate?: () => void;
-  onTaskEdit?: (task: Task) => void;
-  onTaskDelete?: (task: Task) => void;
-  onTaskStatusChange?: (taskId: string, status: Task['status']) => void;
+  onTaskEdit?: (task: TaskForKeyboardShortcuts) => void;
+  onTaskDelete?: (task: TaskForKeyboardShortcuts) => void;
+  onTaskStatusChange?: (taskId: string, status: TaskStatus) => void;
   onBulkComplete?: () => void;
   onBulkDelete?: () => void;
   onViewModeToggle?: () => void;
   onFocusSearch?: () => void;
-  selectedTasks?: Task[];
-  focusedTask?: Task | null;
+  selectedTasks?: TaskForKeyboardShortcuts[];
+  focusedTask?: TaskForKeyboardShortcuts | null;
   enabled?: boolean;
 }
 

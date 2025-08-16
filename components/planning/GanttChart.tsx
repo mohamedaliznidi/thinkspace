@@ -28,28 +28,9 @@ import {
   IconArrowAutofitWidth,
 } from '@tabler/icons-react';
 import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, differenceInDays } from 'date-fns';
+import type { TaskPlanningData } from '@/types';
 
-interface Task {
-  id: string;
-  title: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'BLOCKED' | 'COMPLETED' | 'CANCELLED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  startDate?: string;
-  dueDate?: string;
-  completedAt?: string;
-  estimatedHours?: number;
-  actualHours?: number;
-  parentTask?: {
-    id: string;
-    title: string;
-  };
-  dependsOnTasks?: {
-    id: string;
-    title: string;
-    completedAt?: string;
-  }[];
-  progress?: number;
-}
+
 
 interface Milestone {
   id: string;
@@ -60,11 +41,11 @@ interface Milestone {
 }
 
 interface GanttChartProps {
-  tasks: Task[];
+  tasks: TaskPlanningData[];
   milestones?: Milestone[];
   startDate?: Date;
   endDate?: Date;
-  onTaskClick?: (task: Task) => void;
+  onTaskClick?: (task: TaskPlanningData) => void;
   onMilestoneClick?: (milestone: Milestone) => void;
   showDependencies?: boolean;
   showCriticalPath?: boolean;
@@ -138,7 +119,7 @@ export function GanttChart({
   }, [dateRange, viewMode]);
 
   // Calculate task bar properties
-  const getTaskBarProps = (task: Task) => {
+  const getTaskBarProps = (task: TaskPlanningData) => {
     if (!task.startDate || !task.dueDate) {
       return null;
     }

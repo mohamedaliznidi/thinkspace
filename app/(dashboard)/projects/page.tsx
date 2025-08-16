@@ -50,31 +50,10 @@ import { formatDistanceToNow } from 'date-fns';
 import { getParaColor } from '@/lib/theme';
 import { ProjectKanban } from '@/components/projects/ProjectKanban';
 import Link from 'next/link';
-
-interface Project {
-  id: string;
-  title: string;
-  description?: string;
-  status: 'ACTIVE' | 'COMPLETED' | 'ON_HOLD' | 'CANCELLED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  progress?: number;
-  dueDate?: string;
-  createdAt: string;
-  updatedAt: string;
-  area?: {
-    id: string;
-    title: string;
-    color: string;
-  };
-  _count: {
-    notes: number;
-    resources: number;
-    tasks: number;
-  };
-}
+import type { ProjectWithCounts } from '@/types';
 
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<ProjectWithCounts[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -84,7 +63,7 @@ export default function ProjectsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [viewMode, setViewMode] = useState<'grid' | 'kanban'>('grid');
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
-  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+  const [projectToDelete, setProjectToDelete] = useState<ProjectWithCounts | null>(null);
 
   // Fetch projects
   const fetchProjects = async () => {

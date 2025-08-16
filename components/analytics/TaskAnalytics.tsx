@@ -42,13 +42,15 @@ import {
   parseISO,
   formatDistanceToNow 
 } from 'date-fns';
+import type { TaskStatus, TaskPriority } from '@/types';
 
-interface Task {
+// Custom interface for analytics that combines display and relations data
+interface TaskForAnalytics {
   id: string;
   title: string;
   description?: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'BLOCKED' | 'COMPLETED' | 'CANCELLED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  status: TaskStatus;
+  priority: TaskPriority;
   dueDate?: string;
   startDate?: string;
   completedAt?: string;
@@ -80,8 +82,8 @@ interface Task {
 }
 
 interface TaskAnalyticsProps {
-  task: Task;
-  projectTasks?: Task[];
+  task: TaskForAnalytics;
+  projectTasks?: TaskForAnalytics[];
 }
 
 export function TaskAnalytics({ task, projectTasks = [] }: TaskAnalyticsProps) {

@@ -31,33 +31,12 @@ import {
 } from '@tabler/icons-react';
 import { getParaColor } from '@/lib/theme';
 import Link from 'next/link';
-
-interface Project {
-  id: string;
-  title: string;
-  description?: string;
-  status: 'ACTIVE' | 'COMPLETED' | 'ON_HOLD' | 'CANCELLED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  progress?: number;
-  dueDate?: string;
-  createdAt: string;
-  updatedAt: string;
-  area?: {
-    id: string;
-    title: string;
-    color: string;
-  };
-  _count: {
-    notes: number;
-    resources: number;
-    tasks: number;
-  };
-}
+import type { ProjectWithCounts, ProjectStatus, ProjectPriority } from '@/types';
 
 interface ProjectKanbanProps {
-  projects: Project[];
-  onProjectUpdate?: (projectId: string, updates: Partial<Project>) => void;
-  onProjectDelete?: (project: Project) => void;
+  projects: ProjectWithCounts[];
+  onProjectUpdate?: (projectId: string, updates: Partial<ProjectWithCounts>) => void;
+  onProjectDelete?: (project: ProjectWithCounts) => void;
 }
 
 const statusColumns = [
@@ -68,7 +47,7 @@ const statusColumns = [
 ];
 
 export function ProjectKanban({ projects, onProjectUpdate, onProjectDelete }: ProjectKanbanProps) {
-  const [draggedProject, setDraggedProject] = useState<Project | null>(null);
+  const [draggedProject, setDraggedProject] = useState<ProjectWithCounts | null>(null);
 
   const formatTimeAgo = (date: string) => {
     const now = new Date();
@@ -98,7 +77,7 @@ export function ProjectKanban({ projects, onProjectUpdate, onProjectDelete }: Pr
     }
   };
 
-  const handleDragStart = (project: Project) => {
+  const handleDragStart = (project: ProjectWithCounts) => {
     setDraggedProject(project);
   };
 
@@ -246,7 +225,7 @@ export function ProjectKanban({ projects, onProjectUpdate, onProjectDelete }: Pr
                           <Group gap="xs">
                             <IconCalendar size="0.8rem" color="var(--mantine-color-dimmed)" />
                             <Text size="xs" c="dimmed">
-                              Due {formatTimeAgo(project.dueDate)}
+                              Due {formatTimeAgo(project.dueDate?.toISOString() || '')}
                             </Text>
                           </Group>
                         )}
@@ -260,7 +239,7 @@ export function ProjectKanban({ projects, onProjectUpdate, onProjectDelete }: Pr
                           </Group>
                           
                           <Text size="xs" c="dimmed">
-                            {formatTimeAgo(project.updatedAt)}
+                            {formatTimeAgo(project.updatedAt.toISOString())}
                           </Text>
                         </Group>
                       </Stack>

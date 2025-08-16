@@ -35,7 +35,8 @@ import {
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 
-interface Task {
+// Simple task interface for time tracking
+interface TaskForTimeTracking {
   id: string;
   title: string;
   estimatedHours?: number;
@@ -43,7 +44,7 @@ interface Task {
 }
 
 interface TimeTrackerProps {
-  task: Task;
+  task: TaskForTimeTracking;
   onTimeUpdate: (taskId: string, actualHours: number) => Promise<void>;
   disabled?: boolean;
 }

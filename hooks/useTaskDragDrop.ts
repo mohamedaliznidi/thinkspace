@@ -8,17 +8,18 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
+import type { TaskStatus } from '@/types';
 
-interface Task {
+interface TaskForDragDrop {
   id: string;
   title: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'BLOCKED' | 'COMPLETED' | 'CANCELLED';
+  status: TaskStatus;
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   order: number;
 }
 
 interface DragState {
-  draggedTask: Task | null;
+  draggedTask: TaskForDragDrop | null;
   draggedOver: string | null;
   isDragging: boolean;
   dragStartPosition: { x: number; y: number } | null;
@@ -26,7 +27,7 @@ interface DragState {
 
 interface UseTaskDragDropProps {
   onTaskReorder?: (taskId: string, newOrder: number, targetTaskId?: string) => void;
-  onTaskStatusChange?: (taskId: string, newStatus: Task['status']) => void;
+  onTaskStatusChange?: (taskId: string, newStatus: TaskStatus) => void;
   onTaskMove?: (taskId: string, targetProjectId: string, newOrder: number) => void;
   enabled?: boolean;
 }
@@ -46,7 +47,7 @@ export function useTaskDragDrop({
 
   const dragTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleDragStart = useCallback((task: Task, event: React.DragEvent) => {
+  const handleDragStart = useCallback((task: TaskForDragDrop, event: React.DragEvent) => {
     if (!enabled) return;
 
     const rect = event.currentTarget.getBoundingClientRect();
@@ -149,8 +150,8 @@ export function useTaskDragDrop({
 
   const handleDrop = useCallback((
     event: React.DragEvent,
-    targetTask?: Task,
-    targetStatus?: Task['status'],
+    targetTask?: TaskForDragDrop,
+    targetStatus?: TaskStatus,
     targetProjectId?: string
   ) => {
     if (!enabled) return;
@@ -164,7 +165,7 @@ export function useTaskDragDrop({
     }
 
     try {
-      const draggedTaskData = JSON.parse(event.dataTransfer.getData('application/json')) as Task;
+      const draggedTaskData = JSON.parse(event.dataTransfer.getData('application/json')) as TaskForDragDrop;
       
       if (!draggedTaskData) return;
 
@@ -193,7 +194,7 @@ export function useTaskDragDrop({
     });
   }, [enabled, onTaskReorder, onTaskStatusChange, onTaskMove]);
 
-  const getDragProps = useCallback((task: Task) => ({
+  const getDragProps = useCallback((task: TaskForDragDrop) => ({
     draggable: enabled,
     onDragStart: (e: React.DragEvent) => handleDragStart(task, e),
     onDragEnd: handleDragEnd,
@@ -208,8 +209,8 @@ export function useTaskDragDrop({
   }), [enabled, dragState.draggedTask, handleDragStart, handleDragEnd]);
 
   const getDropProps = useCallback((
-    targetTask?: Task,
-    targetStatus?: Task['status'],
+    targetTask?: TaskForDragDrop,
+    targetStatus?: TaskStatus,
     targetProjectId?: string
   ) => ({
     onDragOver: (e: React.DragEvent) => handleDragOver(e, targetTask?.id || targetStatus || targetProjectId),

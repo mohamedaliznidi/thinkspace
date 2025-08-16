@@ -35,36 +35,11 @@ import {
   IconActivity,
 } from '@tabler/icons-react';
 import { differenceInDays, format, isAfter, isBefore, parseISO } from 'date-fns';
-
-interface Task {
-  id: string;
-  title: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'BLOCKED' | 'COMPLETED' | 'CANCELLED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  dueDate?: string;
-  startDate?: string;
-  completedAt?: string;
-  estimatedHours?: number;
-  actualHours?: number;
-  createdAt: string;
-}
-
-interface Project {
-  id: string;
-  title: string;
-  status: 'PLANNING' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'CANCELLED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  dueDate?: string;
-  startDate?: string;
-  completedAt?: string;
-  progress: number;
-  createdAt: string;
-  tasks?: Task[];
-}
+import type { TaskDisplay, ProjectDisplay } from '@/types';
 
 interface ProjectAnalyticsProps {
-  project: Project;
-  tasks: Task[];
+  project: ProjectDisplay;
+  tasks: TaskDisplay[];
 }
 
 export function ProjectAnalytics({ project, tasks }: ProjectAnalyticsProps) {

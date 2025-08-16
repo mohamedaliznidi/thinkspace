@@ -38,6 +38,18 @@ export type ProjectWithRelations = Prisma.ProjectGetPayload<{
   };
 }>;
 
+export type TaskWithRelations = Prisma.TaskGetPayload<{
+  include: {
+    user: true;
+    project: true;
+    parentTask: true;
+    subtasks: true;
+    dependsOnTasks: true;
+    dependentTasks: true;
+    activities: true;
+  };
+}>;
+
 export type AreaWithRelations = Prisma.AreaGetPayload<{
   include: {
     user: true;
@@ -168,6 +180,12 @@ export type NoteUpdateInput = Prisma.NoteUpdateInput;
 export type NoteWhereInput = Prisma.NoteWhereInput;
 export type NoteWhereUniqueInput = Prisma.NoteWhereUniqueInput;
 export type NoteOrderByInput = Prisma.NoteOrderByWithRelationInput;
+
+export type TaskCreateInput = Prisma.TaskCreateInput;
+export type TaskUpdateInput = Prisma.TaskUpdateInput;
+export type TaskWhereInput = Prisma.TaskWhereInput;
+export type TaskWhereUniqueInput = Prisma.TaskWhereUniqueInput;
+export type TaskOrderByInput = Prisma.TaskOrderByWithRelationInput;
 
 export type ChatCreateInput = Prisma.ChatCreateInput;
 export type ChatUpdateInput = Prisma.ChatUpdateInput;
@@ -307,6 +325,26 @@ export interface ChatRepository extends BaseRepository<
   addMessage(chatId: string, messageData: MessageCreateInput): Promise<MessageWithRelations>;
 }
 
+export interface TaskRepository extends BaseRepository<
+  TaskWithRelations,
+  TaskCreateInput,
+  TaskUpdateInput,
+  TaskWhereInput,
+  TaskWhereUniqueInput
+> {
+  findByUserId(userId: string, options?: QueryOptions): Promise<TaskWithRelations[]>;
+  findByProjectId(projectId: string, options?: QueryOptions): Promise<TaskWithRelations[]>;
+  findByStatus(status: string, userId: string): Promise<TaskWithRelations[]>;
+  findByPriority(priority: string, userId: string): Promise<TaskWithRelations[]>;
+  findOverdue(userId: string): Promise<TaskWithRelations[]>;
+  findSubtasks(parentTaskId: string): Promise<TaskWithRelations[]>;
+  updateStatus(id: string, status: string): Promise<TaskWithRelations>;
+  updateProgress(id: string, actualHours: number): Promise<TaskWithRelations>;
+  markCompleted(id: string): Promise<TaskWithRelations>;
+  addDependency(taskId: string, dependsOnTaskId: string): Promise<void>;
+  removeDependency(taskId: string, dependsOnTaskId: string): Promise<void>;
+}
+
 // Transaction Types
 export interface TransactionContext {
   user: Prisma.TransactionClient['user'];
@@ -314,6 +352,7 @@ export interface TransactionContext {
   area: Prisma.TransactionClient['area'];
   resource: Prisma.TransactionClient['resource'];
   note: Prisma.TransactionClient['note'];
+  task: Prisma.TransactionClient['task'];
   chat: Prisma.TransactionClient['chat'];
   message: Prisma.TransactionClient['message'];
   connection: Prisma.TransactionClient['connection'];

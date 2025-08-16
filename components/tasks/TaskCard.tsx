@@ -36,49 +36,14 @@ import {
 import { formatDistanceToNow, format } from 'date-fns';
 import { getParaColor } from '@/lib/theme';
 import Link from 'next/link';
-
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'BLOCKED' | 'COMPLETED' | 'CANCELLED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  dueDate?: string;
-  startDate?: string;
-  completedAt?: string;
-  estimatedHours?: number;
-  actualHours?: number;
-  order: number;
-  tags: string[];
-  project: {
-    id: string;
-    title: string;
-    status: string;
-  };
-  parentTask?: {
-    id: string;
-    title: string;
-  };
-  subtasks?: {
-    id: string;
-    title: string;
-    status: string;
-    completedAt?: string;
-  }[];
-  _count: {
-    subtasks: number;
-    activities: number;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
+import type { TaskDisplay, TaskStatus } from '@/types';
 
 interface TaskCardProps {
-  task: Task;
-  onEdit?: (task: Task) => void;
-  onDelete?: (task: Task) => void;
-  onStatusChange?: (taskId: string, status: Task['status']) => void;
-  onDragStart?: (task: Task) => void;
+  task: TaskDisplay;
+  onEdit?: (task: TaskDisplay) => void;
+  onDelete?: (task: TaskDisplay) => void;
+  onStatusChange?: (taskId: string, status: TaskStatus) => void;
+  onDragStart?: (task: TaskDisplay) => void;
   onDragEnd?: () => void;
   draggable?: boolean;
   compact?: boolean;
@@ -214,7 +179,7 @@ export function TaskCard({
                       {['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'BLOCKED', 'COMPLETED'].map((status) => (
                         <Menu.Item
                           key={status}
-                          onClick={() => onStatusChange(task.id, status as Task['status'])}
+                          onClick={() => onStatusChange(task.id, status as TaskStatus)}
                           disabled={task.status === status}
                         >
                           {status.replace('_', ' ')}

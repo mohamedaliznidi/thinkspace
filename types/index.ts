@@ -1,10 +1,16 @@
 /**
  * ThinkSpace Type Definitions
- * 
+ *
  * Central type definitions for the ThinkSpace PARA methodology
  * knowledge management system. Includes database models, API types,
  * authentication types, and utility types.
  */
+
+// Import and re-export centralized task types
+export * from './task';
+
+// Import and re-export centralized project types
+export * from './project';
 
 import type {
   User,
@@ -19,9 +25,13 @@ import type {
   Search,
   GraphSnapshot,
   File,
+  Task,
   UserRole,
   ProjectStatus,
   ProjectPriority,
+  TaskStatus,
+  TaskPriority,
+  ProjectTemplateCategory,
   AreaType,
   ResourceType,
   NoteType,
@@ -46,9 +56,13 @@ export type {
   Search,
   GraphSnapshot,
   File,
+  Task,
   UserRole,
   ProjectStatus,
   ProjectPriority,
+  TaskStatus,
+  TaskPriority,
+  ProjectTemplateCategory,
   AreaType,
   ResourceType,
   NoteType,
@@ -154,6 +168,16 @@ export interface FileWithRelations extends File {
   areas?: Area[];
   resources?: Resource[];
   notes?: Note[];
+  activities?: Activity[];
+}
+
+export interface TaskWithRelations extends Task {
+  user?: User;
+  project?: Project;
+  parentTask?: Task;
+  subtasks?: Task[];
+  dependsOnTasks?: Task[];
+  dependentTasks?: Task[];
   activities?: Activity[];
 }
 
@@ -358,6 +382,61 @@ export interface ChangePasswordData {
   confirmPassword: string;
 }
 
+// Task API Types
+export interface TaskCreateRequest {
+  title: string;
+  description?: string;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  projectId: string;
+  parentTaskId?: string;
+  dueDate?: string;
+  startDate?: string;
+  estimatedHours?: number;
+  order?: number;
+  tags?: string[];
+  metadata?: Record<string, any>;
+}
+
+export interface TaskUpdateRequest {
+  title?: string;
+  description?: string;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  parentTaskId?: string | null;
+  dueDate?: string | null;
+  startDate?: string | null;
+  completedAt?: string | null;
+  estimatedHours?: number | null;
+  actualHours?: number | null;
+  order?: number;
+  tags?: string[];
+  metadata?: Record<string, any>;
+}
+
+export interface TaskResponse {
+  task: Task;
+}
+
+export interface TasksListResponse {
+  tasks: Task[];
+  meta: ApiMeta;
+}
+
+export interface TasksListRequest {
+  page?: number;
+  limit?: number;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  projectId?: string;
+  parentTaskId?: string;
+  search?: string;
+  sortBy?: 'title' | 'status' | 'priority' | 'dueDate' | 'createdAt' | 'updatedAt' | 'order';
+  sortOrder?: 'asc' | 'desc';
+  includeSubtasks?: boolean;
+  includeProject?: boolean;
+}
+
 // Form Types
 export interface ProjectFormData {
   title: string;
@@ -480,7 +559,7 @@ export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
 export type RequiredFields<T, K extends keyof T> = T & Required<Pick<T, K>>;
 
-export type EntityType = 'user' | 'project' | 'area' | 'resource' | 'note' | 'chat' | 'message' | 'file';
+export type EntityType = 'user' | 'project' | 'area' | 'resource' | 'note' | 'chat' | 'message' | 'file' | 'task';
 
 export type SortOrder = 'asc' | 'desc';
 

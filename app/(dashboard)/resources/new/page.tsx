@@ -27,6 +27,13 @@ import {
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { IconAlertTriangle, IconArrowLeft, IconCheck, IconLink, IconUpload } from '@tabler/icons-react';
+
+// Simple project interface for resource creation
+interface ProjectForResources {
+  id: string;
+  title: string;
+  status: string;
+}
 import { getParaColor } from '@/lib/theme';
 import Link from 'next/link';
 
@@ -36,11 +43,7 @@ interface Area {
   color: string;
 }
 
-interface Project {
-  id: string;
-  title: string;
-  status: string;
-}
+
 
 interface ResourceFormData {
   title: string;
@@ -56,7 +59,7 @@ export default function NewResourcePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [areas, setAreas] = useState<Area[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<ProjectForResources[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [resourceType, setResourceType] = useState<'link' | 'upload'>('link');
 

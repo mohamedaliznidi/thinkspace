@@ -27,6 +27,13 @@ import {
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { IconAlertTriangle, IconArrowLeft, IconCheck } from '@tabler/icons-react';
+
+// Simple project interface for note creation
+interface ProjectForNotes {
+  id: string;
+  title: string;
+  status: string;
+}
 import Link from 'next/link';
 
 interface Area {
@@ -35,11 +42,7 @@ interface Area {
   color: string;
 }
 
-interface Project {
-  id: string;
-  title: string;
-  status: string;
-}
+
 
 interface Resource {
   id: string;
@@ -62,7 +65,7 @@ export default function NewNotePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [areas, setAreas] = useState<Area[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<ProjectForNotes[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [error, setError] = useState<string | null>(null);
 

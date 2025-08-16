@@ -57,15 +57,24 @@ import { GanttChart, Timeline, CriticalPath } from '@/components/planning';
 import { ProjectAnalytics, TaskAnalytics, TimeTracker } from '@/components/analytics';
 import { useTaskKeyboardShortcuts } from '@/hooks/useTaskKeyboardShortcuts';
 import Link from 'next/link';
+import type { TaskDisplay, ProjectDisplay, TaskPlanningData } from '@/types';
 
-interface Task {
+// Import the custom interfaces from components
+type TaskForTimeTracking = {
+  id: string;
+  title: string;
+  estimatedHours?: number;
+  actualHours?: number;
+};
+
+import type { TaskStatus, TaskPriority } from '@/types';
+
+type TaskForAnalytics = {
   id: string;
   title: string;
   description?: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'BLOCKED' | 'COMPLETED' | 'CANCELLED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  projectId: string;
-  parentTaskId?: string;
+  status: TaskStatus;
+  priority: TaskPriority;
   dueDate?: string;
   startDate?: string;
   completedAt?: string;
@@ -73,12 +82,6 @@ interface Task {
   actualHours?: number;
   order: number;
   tags: string[];
-  metadata?: Record<string, any>;
-  project: {
-    id: string;
-    title: string;
-    status: string;
-  };
   parentTask?: {
     id: string;
     title: string;
@@ -89,77 +92,86 @@ interface Task {
     status: string;
     completedAt?: string;
   }[];
+  dependsOnTasks?: {
+    id: string;
+    title: string;
+    completedAt?: string;
+  }[];
   _count: {
     subtasks: number;
     activities: number;
   };
   createdAt: string;
   updatedAt: string;
-}
+};
 
-interface Project {
-  id: string;
-  title: string;
-  description?: string;
-  status: 'PLANNING' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'CANCELLED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  progress: number;
-  startDate?: string;
-  dueDate?: string;
-  createdAt: string;
-  updatedAt: string;
-  tags: string[];
-  areas: Array<{
-    id: string;
-    title: string;
-    color: string;
-    description?: string;
-  }>;
-  resources: Array<{
-    id: string;
-    title: string;
-    description?: string;
-    type: string;
-    createdAt: string;
-  }>;
-  notes: Array<{
-    id: string;
-    title: string;
-    content: string;
-    type: string;
-    createdAt: string;
-    updatedAt: string;
-  }>;
-  tasks?: Task[];
-  _count: {
-    notes: number;
-    resources: number;
-    tasks?: number;
-  };
-}
+// Helper functions to convert between task types
+const convertToTaskPlanningData = (task: TaskDisplay): TaskPlanningData => ({
+  id: task.id,
+  title: task.title,
+  status: task.status,
+  priority: task.priority,
+  startDate: task.startDate || undefined,
+  dueDate: task.dueDate || undefined,
+  completedAt: task.completedAt || undefined,
+  estimatedHours: task.estimatedHours || undefined,
+  actualHours: task.actualHours || undefined,
+  parentTask: task.parentTask,
+  dependsOnTasks: [], // Would need to be populated from relations
+  progress: task.actualHours && task.estimatedHours ?
+    Math.round((task.actualHours / task.estimatedHours) * 100) : 0,
+});
+
+const convertToTaskForTimeTracking = (task: TaskDisplay): TaskForTimeTracking => ({
+  id: task.id,
+  title: task.title,
+  estimatedHours: task.estimatedHours || undefined,
+  actualHours: task.actualHours || undefined,
+});
+
+const convertToTaskForAnalytics = (task: TaskDisplay): TaskForAnalytics => ({
+  id: task.id,
+  title: task.title,
+  description: task.description || undefined,
+  status: task.status,
+  priority: task.priority,
+  dueDate: task.dueDate || undefined,
+  startDate: task.startDate || undefined,
+  completedAt: task.completedAt || undefined,
+  estimatedHours: task.estimatedHours || undefined,
+  actualHours: task.actualHours || undefined,
+  order: task.order,
+  tags: task.tags,
+  parentTask: task.parentTask,
+  subtasks: task.subtasks,
+  dependsOnTasks: [], // Would need to be populated from relations
+  _count: task._count,
+  createdAt: task.createdAt,
+  updatedAt: task.updatedAt,
+});
 
 export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
   const projectId = params.id as string;
-  
-  const [project, setProject] = useState<Project | null>(null);
+
+  const [project, setProject] = useState<ProjectDisplay | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
 
   // Task management state
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<TaskDisplay[]>([]);
   const [tasksLoading, setTasksLoading] = useState(false);
   const [tasksError, setTasksError] = useState<string | null>(null);
   const [taskViewMode, setTaskViewMode] = useState<'list' | 'kanban'>('list');
   const [taskFormOpened, { open: openTaskForm, close: closeTaskForm }] = useDisclosure(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editingTask, setEditingTask] = useState<TaskDisplay | null>(null);
 
   // Tab and keyboard shortcuts state
   const [activeTab, setActiveTab] = useState<string>('overview');
-  const [focusedTask, setFocusedTask] = useState<Task | null>(null);
-  const [selectedTasks, setSelectedTasks] = useState<Task[]>([]);
+  const [focusedTask, setFocusedTask] = useState<TaskDisplay | null>(null);
+  const [selectedTasks, setSelectedTasks] = useState<TaskDisplay[]>([]);
 
   // Fetch project details
   const fetchProject = async () => {
@@ -271,7 +283,7 @@ export default function ProjectDetailPage() {
 
   const handleTaskEdit = (task: any) => {
     // Convert task to form-compatible format
-    const formTask: Task = {
+    const formTask: TaskDisplay = {
       ...task,
       projectId: task.project?.id || projectId,
     };
@@ -361,7 +373,11 @@ export default function ProjectDetailPage() {
   useTaskKeyboardShortcuts({
     onTaskCreate: openTaskForm,
     onTaskEdit: (task) => {
-      setEditingTask(task as Task);
+      // Find the full task from the tasks array
+      const fullTask = tasks.find(t => t.id === task.id);
+      if (fullTask) {
+        setEditingTask(fullTask);
+      }
       openTaskForm();
     },
     onTaskDelete: handleTaskDelete,
@@ -707,8 +723,8 @@ export default function ProjectDetailPage() {
                 }
                 setSelectedTasks([]);
               }}
-              onTaskFocus={(task) => setFocusedTask(task as Task | null)}
-              onTaskSelect={(tasks) => setSelectedTasks(tasks as Task[])}
+              onTaskFocus={(task) => setFocusedTask(task)}
+              onTaskSelect={(tasks) => setSelectedTasks(tasks)}
               showProject={false}
               allowReorder={true}
               allowBulkActions={true}
@@ -722,22 +738,31 @@ export default function ProjectDetailPage() {
                 setEditingTask({
                   id: '',
                   title: '',
+                  description: null,
                   status: status || 'TODO',
                   priority: 'MEDIUM',
                   projectId: projectId,
+                  parentTaskId: null,
+                  dueDate: undefined,
+                  startDate: undefined,
+                  completedAt: undefined,
+                  estimatedHours: null,
+                  actualHours: null,
                   order: 0,
                   tags: [],
+                  metadata: null,
+                  userId: '',
                   project: { id: projectId, title: project?.title || '', status: project?.status || '' },
                   _count: { subtasks: 0, activities: 0 },
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString(),
-                } as Task);
+                });
                 openTaskForm();
               }}
               onTaskEdit={handleTaskEdit}
               onTaskDelete={handleTaskDelete}
               onTaskStatusChange={handleTaskStatusChange}
-              onTaskFocus={(task) => setFocusedTask(task as Task | null)}
+              onTaskFocus={(task) => setFocusedTask(task)}
               showProject={false}
             />
           )}
@@ -751,7 +776,7 @@ export default function ProjectDetailPage() {
           <Stack gap="md">
             <Group justify="space-between">
               <Text fw={600} c={getParaColor('areas')}>
-                Related Areas ({project.areas.length})
+                Related Areas ({project.areas?.length || 0})
               </Text>
               <Button
                 component={Link}
@@ -764,9 +789,9 @@ export default function ProjectDetailPage() {
               </Button>
             </Group>
 
-            {project.areas.length > 0 ? (
+            {project.areas && project.areas.length > 0 ? (
               <Stack gap="sm">
-                {project.areas.slice(0, 3).map((area) => (
+                {project.areas?.slice(0, 3).map((area) => (
                   <Card key={area.id} padding="sm" radius="sm" withBorder>
                     <Group justify="space-between">
                       <Group gap="xs">
@@ -798,9 +823,9 @@ export default function ProjectDetailPage() {
                     </Group>
                   </Card>
                 ))}
-                {project.areas.length > 3 && (
+                {project.areas && project.areas.length > 3 && (
                   <Text size="xs" c="dimmed" ta="center">
-                    +{project.areas.length - 3} more areas
+                    +{(project.areas?.length || 0) - 3} more areas
                   </Text>
                 )}
               </Stack>
@@ -830,9 +855,9 @@ export default function ProjectDetailPage() {
               </Button>
             </Group>
 
-            {project.resources.length > 0 ? (
+            {project.resources && project.resources.length > 0 ? (
               <Stack gap="sm">
-                {project.resources.slice(0, 3).map((resource) => (
+                {project.resources?.slice(0, 3).map((resource) => (
                   <Card key={resource.id} padding="sm" radius="sm" withBorder>
                     <Group justify="space-between">
                       <Group gap="xs">
@@ -894,9 +919,9 @@ export default function ProjectDetailPage() {
               </Button>
             </Group>
 
-            {project.notes.length > 0 ? (
+            {project.notes && project.notes.length > 0 ? (
               <Stack gap="sm">
-                {project.notes.slice(0, 3).map((note) => (
+                {project.notes?.slice(0, 3).map((note) => (
                   <Card key={note.id} padding="sm" radius="sm" withBorder>
                     <Stack gap="xs">
                       <Group justify="space-between">
@@ -946,11 +971,15 @@ export default function ProjectDetailPage() {
               <Stack gap="md">
                 <Text fw={600} size="lg">Project Timeline</Text>
                 <GanttChart
-                  tasks={tasks || []}
+                  tasks={(tasks || []).map(convertToTaskPlanningData)}
                   startDate={project.startDate ? new Date(project.startDate) : undefined}
                   endDate={project.dueDate ? new Date(project.dueDate) : undefined}
                   onTaskClick={(task) => {
-                    setEditingTask(task as Task);
+                    // Find the full task from the tasks array
+                    const fullTask = tasks.find(t => t.id === task.id);
+                    if (fullTask) {
+                      setEditingTask(fullTask);
+                    }
                     openTaskForm();
                   }}
                   showDependencies={true}
@@ -967,7 +996,11 @@ export default function ProjectDetailPage() {
                   tasks={tasks || []}
                   milestones={[]}
                   onTaskClick={(task) => {
-                    setEditingTask(task as Task);
+                    // Find the full task from the tasks array
+                    const fullTask = tasks.find(t => t.id === task.id);
+                    if (fullTask) {
+                      setEditingTask(fullTask);
+                    }
                     openTaskForm();
                   }}
                 />
@@ -979,7 +1012,7 @@ export default function ProjectDetailPage() {
               <Stack gap="md">
                 <Text fw={600} size="lg">Critical Path Analysis</Text>
                 <CriticalPath
-                  tasks={tasks || []}
+                  tasks={(tasks || []).map(convertToTaskPlanningData)}
                   projectStartDate={project.startDate ? new Date(project.startDate) : undefined}
                   projectEndDate={project.dueDate ? new Date(project.dueDate) : undefined}
                 />
@@ -1002,7 +1035,7 @@ export default function ProjectDetailPage() {
                 <Stack gap="md">
                   <Text fw={600} size="lg">Time Tracking - {focusedTask.title}</Text>
                   <TimeTracker
-                    task={focusedTask}
+                    task={convertToTaskForTimeTracking(focusedTask)}
                     onTimeUpdate={async (hours) => {
                       // Update task with new time
                       await handleTaskUpdate({
@@ -1021,8 +1054,8 @@ export default function ProjectDetailPage() {
                 <Stack gap="md">
                   <Text fw={600} size="lg">Task Analytics</Text>
                   <TaskAnalytics
-                    task={tasks[0]} // Show analytics for first task as example
-                    projectTasks={tasks}
+                    task={convertToTaskForAnalytics(tasks[0])} // Show analytics for first task as example
+                    projectTasks={tasks.map(convertToTaskForAnalytics)}
                   />
                 </Stack>
               </Card>

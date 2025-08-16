@@ -31,56 +31,21 @@ import {
   IconPlus,
 } from '@tabler/icons-react';
 import { TaskCard } from './TaskCard';
-
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  status: 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'BLOCKED' | 'COMPLETED' | 'CANCELLED';
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  dueDate?: string;
-  startDate?: string;
-  completedAt?: string;
-  estimatedHours?: number;
-  actualHours?: number;
-  order: number;
-  tags: string[];
-  project: {
-    id: string;
-    title: string;
-    status: string;
-  };
-  parentTask?: {
-    id: string;
-    title: string;
-  };
-  subtasks?: {
-    id: string;
-    title: string;
-    status: string;
-    completedAt?: string;
-  }[];
-  _count: {
-    subtasks: number;
-    activities: number;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
+import type { TaskDisplay, TaskStatus } from '@/types';
 
 interface TaskListProps {
-  tasks: Task[];
+  tasks: TaskDisplay[];
   loading?: boolean;
   error?: string;
   onTaskCreate?: () => void;
-  onTaskEdit?: (task: Task) => void;
-  onTaskDelete?: (task: Task) => void;
-  onTaskStatusChange?: (taskId: string, status: Task['status']) => void;
+  onTaskEdit?: (task: TaskDisplay) => void;
+  onTaskDelete?: (task: TaskDisplay) => void;
+  onTaskStatusChange?: (taskId: string, status: TaskStatus) => void;
   onTaskReorder?: (taskId: string, newOrder: number) => void;
-  onBulkStatusChange?: (taskIds: string[], status: Task['status']) => void;
+  onBulkStatusChange?: (taskIds: string[], status: TaskStatus) => void;
   onBulkDelete?: (taskIds: string[]) => void;
-  onTaskFocus?: (task: Task | null) => void;
-  onTaskSelect?: (tasks: Task[]) => void;
+  onTaskFocus?: (task: TaskDisplay | null) => void;
+  onTaskSelect?: (tasks: TaskDisplay[]) => void;
   showProject?: boolean;
   allowReorder?: boolean;
   allowBulkActions?: boolean;
@@ -112,7 +77,7 @@ export function TaskList({
   const [sortField, setSortField] = useState<SortField>('order');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
-  const [draggedTask, setDraggedTask] = useState<Task | null>(null);
+  const [draggedTask, setDraggedTask] = useState<TaskDisplay | null>(null);
 
   // Filter and sort tasks
   const filteredAndSortedTasks = useMemo(() => {
@@ -215,7 +180,7 @@ export function TaskList({
     setSelectedTasks(new Set());
   };
 
-  const handleDragStart = (task: Task) => {
+  const handleDragStart = (task: TaskDisplay) => {
     setDraggedTask(task);
   };
 
@@ -223,7 +188,7 @@ export function TaskList({
     setDraggedTask(null);
   };
 
-  const handleDrop = (targetTask: Task) => {
+  const handleDrop = (targetTask: TaskDisplay) => {
     if (draggedTask && draggedTask.id !== targetTask.id && onTaskReorder) {
       onTaskReorder(draggedTask.id, targetTask.order);
     }
