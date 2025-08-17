@@ -24,18 +24,24 @@ import {
   Text,
   ColorInput,
   Switch,
+  Tabs,
+  Divider,
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
-import { IconAlertTriangle, IconArrowLeft, IconCheck } from '@tabler/icons-react';
+import { IconAlertTriangle, IconArrowLeft, IconCheck, IconTemplate, IconEdit } from '@tabler/icons-react';
 import { getParaColor } from '@/lib/theme';
 import Link from 'next/link';
+import TemplateGallery from '@/components/areas/TemplateGallery';
+import type { AreaTemplate, TemplateCustomizations } from '@/types/area-template';
 
 interface AreaFormData {
   title: string;
   description: string;
   color: string;
   type: string;
+  responsibilityLevel: string;
+  reviewFrequency: string;
   isActive: boolean;
   tags: string[];
 }
@@ -44,6 +50,8 @@ export default function NewAreaPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('custom');
+  const [selectedTemplate, setSelectedTemplate] = useState<AreaTemplate | null>(null);
 
   const form = useForm<AreaFormData>({
     initialValues: {
@@ -51,6 +59,8 @@ export default function NewAreaPage() {
       description: '',
       color: getParaColor('areas'),
       type: 'RESPONSIBILITY',
+      responsibilityLevel: 'MEDIUM',
+      reviewFrequency: 'MONTHLY',
       isActive: true,
       tags: [],
     },
@@ -70,6 +80,22 @@ export default function NewAreaPage() {
       },
     },
   });
+
+  const handleTemplateSelect = (template: AreaTemplate, customizations?: TemplateCustomizations) => {
+    setSelectedTemplate(template);
+    // Pre-fill form with template data
+    form.setValues({
+      title: customizations?.area?.title || template.template.area.title,
+      description: customizations?.area?.description || template.template.area.description || '',
+      color: customizations?.area?.color || template.template.area.color || getParaColor('areas'),
+      type: customizations?.area?.type || template.template.area.type,
+      responsibilityLevel: customizations?.area?.responsibilityLevel || template.template.area.responsibilityLevel,
+      reviewFrequency: customizations?.area?.reviewFrequency || template.template.area.reviewFrequency,
+      isActive: true,
+      tags: customizations?.area?.tags || template.template.area.tags || [],
+    });
+    setActiveTab('custom');
+  };
 
   const handleSubmit = async (values: AreaFormData) => {
     setLoading(true);
@@ -141,8 +167,39 @@ export default function NewAreaPage() {
         </Alert>
       )}
 
-      {/* Form */}
-      <Card padding="lg" radius="md" withBorder>
+      {/* Tabs */}
+      <Tabs value={activeTab} onChange={(value) => setActiveTab(value || 'custom')}>
+        <Tabs.List>
+          <Tabs.Tab value="templates" leftSection={<IconTemplate size="0.8rem" />}>
+            Use Template
+          </Tabs.Tab>
+          <Tabs.Tab value="custom" leftSection={<IconEdit size="0.8rem" />}>
+            Custom Area
+          </Tabs.Tab>
+        </Tabs.List>
+
+        <Tabs.Panel value="templates" pt="md">
+          <TemplateGallery
+            onTemplateSelect={handleTemplateSelect}
+          />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="custom" pt="md">
+          {selectedTemplate && (
+            <Alert color="blue" mb="md">
+              Creating area from template: <strong>{selectedTemplate.name}</strong>
+              <Button
+                variant="subtle"
+                size="xs"
+                onClick={() => setSelectedTemplate(null)}
+                ml="sm"
+              >
+                Clear Template
+              </Button>
+            </Alert>
+          )}
+
+          <Card padding="lg" radius="md" withBorder>
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack gap="md">
             {/* Basic Information */}
@@ -175,10 +232,46 @@ export default function NewAreaPage() {
                   data={[
                     { value: 'RESPONSIBILITY', label: 'Responsibility' },
                     { value: 'INTEREST', label: 'Interest' },
-                    { value: 'SKILL', label: 'Skill' },
-                    { value: 'GOAL', label: 'Goal' },
+                    { value: 'LEARNING', label: 'Learning' },
+                    { value: 'HEALTH', label: 'Health' },
+                    { value: 'FINANCE', label: 'Finance' },
+                    { value: 'CAREER', label: 'Career' },
+                    { value: 'PERSONAL', label: 'Personal' },
+                    { value: 'OTHER', label: 'Other' },
                   ]}
                   {...form.getInputProps('type')}
+                />
+              </Grid.Col>
+
+              <Grid.Col span={{ base: 12, sm: 6 }}>
+                <Select
+                  label="Priority Level"
+                  placeholder="Select priority level"
+                  required
+                  data={[
+                    { value: 'LOW', label: 'Low Priority' },
+                    { value: 'MEDIUM', label: 'Medium Priority' },
+                    { value: 'HIGH', label: 'High Priority' },
+                  ]}
+                  {...form.getInputProps('responsibilityLevel')}
+                />
+              </Grid.Col>
+
+              <Grid.Col span={{ base: 12, sm: 6 }}>
+                <Select
+                  label="Review Frequency"
+                  placeholder="Select review frequency"
+                  required
+                  data={[
+                    { value: 'WEEKLY', label: 'Weekly' },
+                    { value: 'BIWEEKLY', label: 'Bi-weekly' },
+                    { value: 'MONTHLY', label: 'Monthly' },
+                    { value: 'QUARTERLY', label: 'Quarterly' },
+                    { value: 'BIANNUALLY', label: 'Bi-annually' },
+                    { value: 'ANNUALLY', label: 'Annually' },
+                    { value: 'CUSTOM', label: 'Custom' },
+                  ]}
+                  {...form.getInputProps('reviewFrequency')}
                 />
               </Grid.Col>
 
@@ -227,6 +320,8 @@ export default function NewAreaPage() {
           </Stack>
         </form>
       </Card>
+        </Tabs.Panel>
+      </Tabs>
     </Stack>
   );
 }

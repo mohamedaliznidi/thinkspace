@@ -17,8 +17,6 @@ import {
   Text,
   Badge,
   SimpleGrid,
-  TextInput,
-  Select,
   ActionIcon,
   Menu,
   Modal,
@@ -26,14 +24,12 @@ import {
   Center,
   Loader,
   Pagination,
-  Grid,
   ColorSwatch,
-  Box,
   Anchor,
+  Tabs,
 } from '@mantine/core';
 import {
   IconPlus,
-  IconSearch,
   IconDots,
   IconEdit,
   IconTrash,
@@ -42,19 +38,43 @@ import {
   IconBookmark,
   IconNote,
   IconAlertTriangle,
+  IconSettings,
+  IconTemplate,
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { formatDistanceToNow } from 'date-fns';
 import { getParaColor } from '@/lib/theme';
 import Link from 'next/link';
+import AreaSearchFilter from '@/components/areas/AreaSearchFilter';
+import AreaHealthIndicator from '@/components/areas/AreaHealthIndicator';
+import MaintenanceDashboard from '@/components/areas/MaintenanceDashboard';
+// Define AreaFilters interface locally since it's not in area-analytics
+interface AreaFilters {
+  search: string;
+  types: string[];
+  responsibilityLevels: string[];
+  reviewFrequencies: string[];
+  healthScoreRange: [number, number];
+  isActive: boolean | null;
+  hasRecentActivity: boolean | null;
+  isReviewOverdue: boolean | null;
+  tags: string[];
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+}
 
 interface Area {
   id: string;
   title: string;
   description?: string;
   color: string;
-  type: 'RESPONSIBILITY' | 'INTEREST' | 'SKILL' | 'GOAL';
+  type: 'RESPONSIBILITY' | 'INTEREST' | 'LEARNING' | 'HEALTH' | 'FINANCE' | 'CAREER' | 'PERSONAL' | 'OTHER';
+  responsibilityLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+  reviewFrequency: 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'BIANNUALLY' | 'ANNUALLY' | 'CUSTOM';
+  healthScore?: number;
+  lastReviewedAt?: string;
+  nextReviewDate?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -62,6 +82,7 @@ interface Area {
     projects: number;
     resources: number;
     notes: number;
+    subInterests?: number;
   };
 }
 
@@ -69,13 +90,26 @@ export default function AreasPage() {
   const [areas, setAreas] = useState<Area[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>('');
-  const [activeFilter, setActiveFilter] = useState<string>('true');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [activeTab, setActiveTab] = useState('areas');
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
   const [areaToDelete, setAreaToDelete] = useState<Area | null>(null);
+
+  // Filters state
+  const [filters, setFilters] = useState<AreaFilters>({
+    search: '',
+    types: [],
+    responsibilityLevels: [],
+    reviewFrequencies: [],
+    healthScoreRange: [0, 1],
+    isActive: null,
+    hasRecentActivity: null,
+    isReviewOverdue: null,
+    tags: [],
+    sortBy: 'title',
+    sortOrder: 'asc',
+  });
 
   // Fetch areas
   const fetchAreas = async () => {
@@ -84,13 +118,16 @@ export default function AreasPage() {
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: '12',
-        ...(searchQuery && { search: searchQuery }),
-        ...(typeFilter && { type: typeFilter }),
-        ...(activeFilter && { isActive: activeFilter }),
+        ...(filters.search && { search: filters.search }),
+        ...(filters.types.length > 0 && { type: filters.types[0] }),
+        ...(filters.isActive !== null && { isActive: filters.isActive.toString() }),
+        ...(filters.responsibilityLevels.length > 0 && { responsibilityLevel: filters.responsibilityLevels[0] }),
+        ...(filters.sortBy && { sortBy: filters.sortBy }),
+        ...(filters.sortOrder && { sortOrder: filters.sortOrder }),
       });
 
       const response = await fetch(`/api/areas?${params}`);
-      
+
       if (response.ok) {
         const data = await response.json();
         setAreas(data.data.areas);
@@ -109,7 +146,7 @@ export default function AreasPage() {
 
   useEffect(() => {
     fetchAreas();
-  }, [currentPage, searchQuery, typeFilter, activeFilter]);
+  }, [currentPage, filters]);
 
   const handleDeleteArea = async () => {
     if (!areaToDelete) return;
@@ -146,10 +183,18 @@ export default function AreasPage() {
     switch (type) {
       case 'RESPONSIBILITY': return <IconMap size="1rem" />;
       case 'INTEREST': return <IconBookmark size="1rem" />;
-      case 'SKILL': return <IconTarget size="1rem" />;
-      case 'GOAL': return <IconNote size="1rem" />;
+      case 'LEARNING': return <IconTarget size="1rem" />;
+      case 'HEALTH': return <IconNote size="1rem" />;
+      case 'FINANCE': return <IconNote size="1rem" />;
+      case 'CAREER': return <IconNote size="1rem" />;
+      case 'PERSONAL': return <IconNote size="1rem" />;
+      case 'OTHER': return <IconMap size="1rem" />;
       default: return <IconMap size="1rem" />;
     }
+  };
+
+  const handleAreaClick = (areaId: string) => {
+    window.location.href = `/areas/${areaId}`;
   };
 
   if (loading) {
@@ -183,58 +228,48 @@ export default function AreasPage() {
             Manage your areas of responsibility and ongoing standards
           </Text>
         </div>
-        
-        <Button
-          component={Link}
-          href="/areas/new"
-          leftSection={<IconPlus size="1rem" />}
-          color={getParaColor('areas')}
-        >
-          New Area
-        </Button>
+
+        <Group gap="sm">
+          <Button
+            component={Link}
+            href="/areas/templates"
+            leftSection={<IconTemplate size="1rem" />}
+            variant="outline"
+            color={getParaColor('areas')}
+          >
+            Templates
+          </Button>
+          <Button
+            component={Link}
+            href="/areas/new"
+            leftSection={<IconPlus size="1rem" />}
+            color={getParaColor('areas')}
+          >
+            New Area
+          </Button>
+        </Group>
       </Group>
 
-      {/* Filters and Search */}
-      <Card padding="md" radius="md" withBorder>
-        <Grid>
-          <Grid.Col span={{ base: 12, sm: 6, md: 4 }}>
-            <TextInput
-              placeholder="Search areas..."
-              leftSection={<IconSearch size="1rem" />}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+      {/* Tabs */}
+      <Tabs value={activeTab} onChange={(value) => setActiveTab(value || 'areas')}>
+        <Tabs.List>
+          <Tabs.Tab value="areas" leftSection={<IconMap size="0.8rem" />}>
+            Areas
+          </Tabs.Tab>
+          <Tabs.Tab value="maintenance" leftSection={<IconSettings size="0.8rem" />}>
+            Maintenance
+          </Tabs.Tab>
+        </Tabs.List>
+
+        <Tabs.Panel value="areas" pt="md">
+          <Stack gap="lg">
+            {/* Search and Filters */}
+            <AreaSearchFilter
+              filters={filters}
+              onFiltersChange={setFilters}
+              showAdvanced={true}
+              compact={false}
             />
-          </Grid.Col>
-          
-          <Grid.Col span={{ base: 6, sm: 3, md: 2 }}>
-            <Select
-              placeholder="Type"
-              data={[
-                { value: '', label: 'All Types' },
-                { value: 'RESPONSIBILITY', label: 'Responsibility' },
-                { value: 'INTEREST', label: 'Interest' },
-                { value: 'SKILL', label: 'Skill' },
-                { value: 'GOAL', label: 'Goal' },
-              ]}
-              value={typeFilter}
-              onChange={(value) => setTypeFilter(value || '')}
-            />
-          </Grid.Col>
-          
-          <Grid.Col span={{ base: 6, sm: 3, md: 2 }}>
-            <Select
-              placeholder="Status"
-              data={[
-                { value: 'true', label: 'Active' },
-                { value: 'false', label: 'Inactive' },
-                { value: '', label: 'All' },
-              ]}
-              value={activeFilter}
-              onChange={(value) => setActiveFilter(value || '')}
-            />
-          </Grid.Col>
-        </Grid>
-      </Card>
 
       {/* Areas Grid */}
       {areas.length > 0 ? (
@@ -307,10 +342,22 @@ export default function AreasPage() {
                     </Menu>
                   </Group>
 
+                  {/* Health Indicator */}
+                  <AreaHealthIndicator
+                    healthScore={area.healthScore}
+                    lastReviewDate={area.lastReviewedAt ? new Date(area.lastReviewedAt) : undefined}
+                    nextReviewDate={area.nextReviewDate ? new Date(area.nextReviewDate) : undefined}
+                    isReviewOverdue={area.nextReviewDate ? new Date(area.nextReviewDate) < new Date() : false}
+                    responsibilityLevel={area.responsibilityLevel}
+                    size="sm"
+                    showDetails={false}
+                  />
+
                   {/* Stats */}
                   <Group gap="xs">
                     <Text size="xs" c="dimmed">
                       {area._count.projects} projects • {area._count.resources} resources • {area._count.notes} notes
+                      {area._count.subInterests !== undefined && ` • ${area._count.subInterests} sub-interests`}
                     </Text>
                   </Group>
 
@@ -356,6 +403,19 @@ export default function AreasPage() {
           </Stack>
         </Card>
       )}
+          </Stack>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="maintenance" pt="md">
+          <MaintenanceDashboard
+            onAreaClick={handleAreaClick}
+            onScheduleReview={(areaId) => {
+              // Handle review scheduling
+              window.location.href = `/areas/${areaId}?tab=reviews`;
+            }}
+          />
+        </Tabs.Panel>
+      </Tabs>
 
       {/* Delete Confirmation Modal */}
       <Modal

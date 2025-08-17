@@ -23,7 +23,7 @@ const updateNoteSchema = z.object({
   content: z.string()
     .min(1, 'Content is required')
     .optional(),
-  type: z.enum(['FLEETING', 'LITERATURE', 'PERMANENT', 'PROJECT', 'MEETING']).optional(),
+  type: z.enum(['QUICK', 'MEETING', 'IDEA', 'REFLECTION', 'SUMMARY', 'RESEARCH', 'TEMPLATE', 'OTHER']).optional(),
   isPinned: z.boolean().optional(),
   projectId: z.string().cuid().optional().nullable(),
   areaId: z.string().cuid().optional().nullable(),

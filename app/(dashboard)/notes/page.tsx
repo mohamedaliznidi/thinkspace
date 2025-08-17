@@ -57,7 +57,7 @@ interface Note {
   id: string;
   title: string;
   content: string;
-  type: 'FLEETING' | 'LITERATURE' | 'PERMANENT' | 'PROJECT' | 'MEETING';
+  type: 'QUICK' | 'MEETING' | 'IDEA' | 'REFLECTION' | 'SUMMARY' | 'RESEARCH' | 'TEMPLATE' | 'OTHER';
   isPinned: boolean;
   tags: string[];
   createdAt: string;
@@ -190,11 +190,14 @@ export default function NotesPage() {
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'FLEETING': return 'yellow';
-      case 'LITERATURE': return 'blue';
-      case 'PERMANENT': return 'green';
-      case 'PROJECT': return 'violet';
-      case 'MEETING': return 'orange';
+      case 'QUICK': return 'blue';
+      case 'MEETING': return 'green';
+      case 'IDEA': return 'yellow';
+      case 'REFLECTION': return 'purple';
+      case 'SUMMARY': return 'orange';
+      case 'RESEARCH': return 'teal';
+      case 'TEMPLATE': return 'indigo';
+      case 'OTHER': return 'gray';
       default: return 'gray';
     }
   };

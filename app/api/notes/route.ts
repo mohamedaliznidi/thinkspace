@@ -21,7 +21,7 @@ const createNoteSchema = z.object({
     .trim(),
   content: z.string()
     .min(1, 'Content is required'),
-  type: z.enum(['FLEETING', 'LITERATURE', 'PERMANENT', 'PROJECT', 'MEETING']).default('FLEETING'),
+  type: z.enum(['QUICK', 'MEETING', 'IDEA', 'REFLECTION', 'SUMMARY', 'RESEARCH', 'TEMPLATE', 'OTHER']).default('QUICK'),
   isPinned: z.boolean().default(false),
   projectId: z.string().cuid().optional(),
   areaId: z.string().cuid().optional(),

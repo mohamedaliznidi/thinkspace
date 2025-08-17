@@ -30,6 +30,7 @@ import {
   Tooltip,
   ColorSwatch,
   Switch,
+  Tabs,
 } from '@mantine/core';
 import {
   IconArrowLeft,
@@ -51,12 +52,20 @@ import {
   IconHealthRecognition,
   IconCoin,
   IconUser,
+  IconMap,
+  IconChartBar,
+  IconSettings,
+  IconPlus,
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { formatDistanceToNow, format } from 'date-fns';
 import { getParaColor } from '@/lib/theme';
 import Link from 'next/link';
+import AreaHealthIndicator from '@/components/areas/AreaHealthIndicator';
+import SubInterestTree from '@/components/areas/SubInterestTree';
+import QuickNoteInput from '@/components/areas/QuickNoteInput';
+import type { SubInterestWithBasic } from '@/types/sub-interest';
 
 interface Area {
   id: string;
@@ -65,6 +74,13 @@ interface Area {
   type: 'RESPONSIBILITY' | 'INTEREST' | 'LEARNING' | 'HEALTH' | 'FINANCE' | 'CAREER' | 'PERSONAL' | 'OTHER';
   color: string;
   isActive: boolean;
+  responsibilityLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+  reviewFrequency: 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'BIANNUALLY' | 'ANNUALLY' | 'CUSTOM';
+  healthScore?: number;
+  lastReviewedAt?: string;
+  nextReviewDate?: string;
+  standards?: any[];
+  criteria?: any;
   createdAt: string;
   updatedAt: string;
   projects: Array<{
@@ -92,10 +108,33 @@ interface Area {
     type: string;
     createdAt: string;
   }>;
+  subInterests?: Array<{
+    id: string;
+    title: string;
+    description?: string;
+    level: number;
+    parentId?: string;
+    createdAt: string;
+    _count: {
+      children: number;
+      projects: number;
+      resources: number;
+      notes_rel: number;
+    };
+  }>;
+  areaReviews?: Array<{
+    id: string;
+    reviewDate: string;
+    reviewType: string;
+    healthScore?: number;
+    notes?: string;
+  }>;
   _count: {
     projects: number;
     resources: number;
     notes: number;
+    subInterests?: number;
+    areaReviews?: number;
   };
 }
 
@@ -107,6 +146,8 @@ export default function AreaDetailPage() {
   const [area, setArea] = useState<Area | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [subInterests, setSubInterests] = useState<SubInterestWithBasic[]>([]);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
 
   // Fetch area details
@@ -132,11 +173,68 @@ export default function AreaDetailPage() {
     }
   };
 
+  // Fetch sub-interests
+  const fetchSubInterests = async () => {
+    try {
+      const response = await fetch(`/api/areas/${areaId}/sub-interests`);
+      if (response.ok) {
+        const data = await response.json();
+        setSubInterests(data.data.subInterests);
+      }
+    } catch (error) {
+      console.error('Error fetching sub-interests:', error);
+    }
+  };
+
   useEffect(() => {
     if (areaId) {
       fetchArea();
+      fetchSubInterests();
     }
   }, [areaId]);
+
+  // Sub-interest handlers
+  const handleSubInterestEdit = (subInterest: SubInterestWithBasic) => {
+    // Navigate to edit sub-interest (would need to implement this page)
+    console.log('Edit sub-interest:', subInterest);
+  };
+
+  const handleSubInterestDelete = async (subInterest: SubInterestWithBasic) => {
+    try {
+      const response = await fetch(`/api/areas/${areaId}/sub-interests/${subInterest.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        notifications.show({
+          title: 'Success',
+          message: 'Sub-interest deleted successfully',
+          color: 'green',
+          icon: <IconCheck size="1rem" />,
+        });
+        fetchSubInterests(); // Refresh the list
+      } else {
+        throw new Error('Failed to delete sub-interest');
+      }
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'Failed to delete sub-interest',
+        color: 'red',
+        icon: <IconAlertTriangle size="1rem" />,
+      });
+    }
+  };
+
+  const handleAddSubInterest = (parentId?: string) => {
+    // Navigate to create sub-interest (would need to implement this)
+    console.log('Add sub-interest with parent:', parentId);
+  };
+
+  const handleNoteCreated = (note: any) => {
+    // Refresh area data to update note count
+    fetchArea();
+  };
 
   // Delete area
   const handleDelete = async () => {
@@ -150,7 +248,6 @@ export default function AreaDetailPage() {
           title: 'Success',
           message: 'Area deleted successfully',
           color: 'green',
-          icon: <IconCheck size="1rem" />,
         });
         router.push('/areas');
       } else {
@@ -162,7 +259,6 @@ export default function AreaDetailPage() {
         title: 'Error',
         message: 'Failed to delete area',
         color: 'red',
-        icon: <IconAlertTriangle size="1rem" />,
       });
     }
     closeDeleteModal();
@@ -329,37 +425,70 @@ export default function AreaDetailPage() {
             </Stack>
           </Group>
 
-          {/* Metadata */}
-          <SimpleGrid cols={{ base: 2, sm: 3 }} spacing="md">
-            <Group gap="xs">
-              <IconClock size="1rem" color="var(--mantine-color-dimmed)" />
-              <Stack gap={0}>
-                <Text size="xs" c="dimmed">Created</Text>
-                <Text size="sm">{formatDistanceToNow(new Date(area.createdAt))} ago</Text>
-              </Stack>
-            </Group>
-            
-            <Group gap="xs">
-              <IconCalendar size="1rem" color="var(--mantine-color-dimmed)" />
-              <Stack gap={0}>
-                <Text size="xs" c="dimmed">Updated</Text>
-                <Text size="sm">{formatDistanceToNow(new Date(area.updatedAt))} ago</Text>
-              </Stack>
-            </Group>
+          {/* Health Indicator and Metadata */}
+          <Grid>
+            <Grid.Col span={{ base: 12, md: 6 }}>
+              <AreaHealthIndicator
+                healthScore={area.healthScore}
+                lastReviewDate={area.lastReviewedAt ? new Date(area.lastReviewedAt) : undefined}
+                nextReviewDate={area.nextReviewDate ? new Date(area.nextReviewDate) : undefined}
+                isReviewOverdue={area.nextReviewDate ? new Date(area.nextReviewDate) < new Date() : false}
+                responsibilityLevel={area.responsibilityLevel}
+                size="lg"
+                showDetails={true}
+              />
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, md: 6 }}>
+              <SimpleGrid cols={2} spacing="md">
+                <Group gap="xs">
+                  <IconClock size="1rem" color="var(--mantine-color-dimmed)" />
+                  <Stack gap={0}>
+                    <Text size="xs" c="dimmed">Created</Text>
+                    <Text size="sm">{formatDistanceToNow(new Date(area.createdAt))} ago</Text>
+                  </Stack>
+                </Group>
 
-            <Group gap="xs">
-              <IconUsers size="1rem" color="var(--mantine-color-dimmed)" />
-              <Stack gap={0}>
-                <Text size="xs" c="dimmed">Status</Text>
-                <Text size="sm">{area.isActive ? 'Active' : 'Inactive'}</Text>
-              </Stack>
-            </Group>
-          </SimpleGrid>
+                <Group gap="xs">
+                  <IconCalendar size="1rem" color="var(--mantine-color-dimmed)" />
+                  <Stack gap={0}>
+                    <Text size="xs" c="dimmed">Updated</Text>
+                    <Text size="sm">{formatDistanceToNow(new Date(area.updatedAt))} ago</Text>
+                  </Stack>
+                </Group>
+              </SimpleGrid>
+            </Grid.Col>
+          </Grid>
         </Stack>
       </Card>
 
-      {/* Related Content */}
-      <SimpleGrid cols={{ base: 1, md: 2, lg: 3 }} spacing="md">
+      {/* Tabs */}
+      <Tabs value={activeTab} onChange={(value) => setActiveTab(value || 'overview')}>
+        <Tabs.List>
+          <Tabs.Tab value="overview" leftSection={<IconTarget size="0.8rem" />}>
+            Overview
+          </Tabs.Tab>
+          <Tabs.Tab value="sub-interests" leftSection={<IconMap size="0.8rem" />}>
+            Sub-Interests ({subInterests.length})
+          </Tabs.Tab>
+          <Tabs.Tab value="analytics" leftSection={<IconChartBar size="0.8rem" />}>
+            Analytics
+          </Tabs.Tab>
+          <Tabs.Tab value="settings" leftSection={<IconSettings size="0.8rem" />}>
+            Settings
+          </Tabs.Tab>
+        </Tabs.List>
+
+        <Tabs.Panel value="overview" pt="md">
+          <Stack gap="lg">
+            {/* Quick Note Input */}
+            <QuickNoteInput
+              areaId={area.id}
+              onNoteCreated={handleNoteCreated}
+              placeholder="Quick note or observation about this area..."
+            />
+
+            {/* Related Content */}
+            <SimpleGrid cols={{ base: 1, md: 2, lg: 3 }} spacing="md">
         {/* Projects */}
         <Card padding="lg" radius="md" withBorder>
           <Stack gap="md">
@@ -555,7 +684,46 @@ export default function AreaDetailPage() {
             )}
           </Stack>
         </Card>
-      </SimpleGrid>
+            </SimpleGrid>
+          </Stack>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="sub-interests" pt="md">
+          <SubInterestTree
+            areaId={area.id}
+            subInterests={subInterests}
+            onEdit={handleSubInterestEdit}
+            onDelete={handleSubInterestDelete}
+            onAddChild={handleAddSubInterest}
+            showCounts={true}
+            showActions={true}
+          />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="analytics" pt="md">
+          <Card padding="xl" withBorder>
+            <Stack gap="md" align="center">
+              <IconChartBar size="3rem" color="var(--mantine-color-gray-5)" />
+              <Text size="lg" fw={500}>Analytics Coming Soon</Text>
+              <Text size="sm" c="dimmed" ta="center">
+                Detailed analytics and insights for this area will be available here
+              </Text>
+            </Stack>
+          </Card>
+        </Tabs.Panel>
+
+        <Tabs.Panel value="settings" pt="md">
+          <Card padding="xl" withBorder>
+            <Stack gap="md" align="center">
+              <IconSettings size="3rem" color="var(--mantine-color-gray-5)" />
+              <Text size="lg" fw={500}>Settings Coming Soon</Text>
+              <Text size="sm" c="dimmed" ta="center">
+                Area settings and configuration options will be available here
+              </Text>
+            </Stack>
+          </Card>
+        </Tabs.Panel>
+      </Tabs>
 
       {/* Delete Confirmation Modal */}
       <Modal

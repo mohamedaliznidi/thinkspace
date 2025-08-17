@@ -53,7 +53,7 @@ interface Resource {
 interface NoteFormData {
   title: string;
   content: string;
-  type: string;
+  type: 'QUICK' | 'MEETING' | 'IDEA' | 'REFLECTION' | 'SUMMARY' | 'RESEARCH' | 'TEMPLATE' | 'OTHER';
   isPinned: boolean;
   projectId?: string;
   areaId?: string;
@@ -73,7 +73,7 @@ export default function NewNotePage() {
     initialValues: {
       title: '',
       content: '',
-      type: 'FLEETING',
+      type: 'QUICK',
       isPinned: false,
       projectId: '',
       areaId: '',
@@ -233,11 +233,14 @@ export default function NewNotePage() {
                   label="Note Type"
                   description="Choose the type of note"
                   data={[
-                    { value: 'FLEETING', label: 'Fleeting - Quick thoughts' },
-                    { value: 'LITERATURE', label: 'Literature - From sources' },
-                    { value: 'PERMANENT', label: 'Permanent - Refined ideas' },
-                    { value: 'PROJECT', label: 'Project - Project-specific' },
-                    { value: 'MEETING', label: 'Meeting - Meeting notes' },
+                    { value: 'QUICK', label: 'Quick - Quick thoughts and notes' },
+                    { value: 'MEETING', label: 'Meeting - Meeting notes and discussions' },
+                    { value: 'IDEA', label: 'Idea - Creative ideas and concepts' },
+                    { value: 'REFLECTION', label: 'Reflection - Personal reflections and insights' },
+                    { value: 'SUMMARY', label: 'Summary - Summaries and overviews' },
+                    { value: 'RESEARCH', label: 'Research - Research notes and findings' },
+                    { value: 'TEMPLATE', label: 'Template - Reusable templates' },
+                    { value: 'OTHER', label: 'Other - Miscellaneous notes' },
                   ]}
                   {...form.getInputProps('type')}
                 />

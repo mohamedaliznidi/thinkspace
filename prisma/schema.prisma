@@ -50,6 +50,10 @@ model User {
   tasks     Task[]
   projectTemplates ProjectTemplate[]
 
+  // Sub-Interests and Reviews
+  subInterests SubInterest[]
+  areaReviews  AreaReview[]
+
   // Chat and AI Relations
   chats     Chat[]
   messages  Message[]
@@ -96,6 +100,7 @@ model Note {
   projects        Project[] @relation("ProjectNotes")
   areas           Area[]    @relation("AreaNotes")
   resources       Resource[] @relation("NoteResources")
+  subInterests    SubInterest[] @relation("SubInterestNotes")
 
   // Chat Relations
   chats           Chat[]
@@ -150,6 +155,7 @@ model Project {
   areas       Area[]       @relation("ProjectAreas")
   resources   Resource[]   @relation("ProjectResources")
   notes       Note[]       @relation("ProjectNotes")
+  subInterests SubInterest[] @relation("SubInterestProjects")
 
   // Chat Relations
   chats       Chat[]
@@ -297,6 +303,23 @@ model Area {
   isActive    Boolean  @default(true)
   color       String?  // Hex color for UI
 
+  // PRD Requirements - Area Management
+  responsibilityLevel ResponsibilityLevel @default(MEDIUM)
+  reviewFrequency     ReviewFrequency     @default(MONTHLY)
+
+  // Standards and Criteria
+  standards           Json?               // Array of standards definitions
+  criteria            Json?               // Measurable criteria and assessment tools
+
+  // Review System
+  lastReviewedAt      DateTime?
+  nextReviewDate      DateTime?
+  reviewTemplate      Json?               // Custom review template
+
+  // Area Health Tracking
+  healthScore         Float?              @default(0.0) // 0.0 to 1.0
+  timeInvestment      Json?               // Time tracking data
+
   // Metadata
   tags        String[]
   metadata    Json?
@@ -304,6 +327,9 @@ model Area {
   // Relations
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Sub-Interests Relations
+  subInterests SubInterest[]
 
   // PARA Relations
   projects    Project[] @relation("ProjectAreas")
@@ -323,6 +349,9 @@ model Area {
   // Activity Relations
   activities  Activity[]
 
+  // Review History
+  areaReviews AreaReview[]
+
   // Timestamps
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -330,6 +359,108 @@ model Area {
   @@map("areas")
   @@index([userId, type])
   @@index([isActive])
+  @@index([nextReviewDate])
+  @@index([healthScore])
+}
+
+// =============================================================================
+// SUB-INTERESTS - HIERARCHICAL AREA ORGANIZATION
+// =============================================================================
+
+model SubInterest {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+
+  // Hierarchical structure
+  parentId    String?
+  parent      SubInterest? @relation("SubInterestHierarchy", fields: [parentId], references: [id])
+  children    SubInterest[] @relation("SubInterestHierarchy")
+
+  // Nesting level for performance
+  level       Int      @default(0)
+
+  // Content and notes
+  notes       String?
+  observations String?
+
+  // Metadata
+  tags        String[]
+  metadata    Json?
+
+  // Relations
+  areaId      String
+  area        Area     @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Content associations
+  projects    Project[] @relation("SubInterestProjects")
+  resources   Resource[] @relation("SubInterestResources")
+  notes_rel   Note[]    @relation("SubInterestNotes")
+
+  // Cross-references
+  relatedSubInterests SubInterest[] @relation("RelatedSubInterests")
+  referencedBy        SubInterest[] @relation("RelatedSubInterests")
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("sub_interests")
+  @@index([areaId])
+  @@index([userId])
+  @@index([parentId])
+  @@index([level])
+}
+
+// =============================================================================
+// AREA REVIEW SYSTEM
+// =============================================================================
+
+model AreaReview {
+  id          String   @id @default(cuid())
+
+  // Review details
+  reviewDate  DateTime @default(now())
+  reviewType  ReviewType @default(SCHEDULED)
+
+  // Review content
+  notes       String?
+  findings    Json?    // Structured review findings
+  improvements Json?   // Improvement actions identified
+
+  // Scores and assessments
+  healthScore Float?   // 0.0 to 1.0
+  criteriaScores Json? // Individual criteria assessments
+
+  // Review template used
+  templateId  String?
+  template    Json?    // Snapshot of template used
+
+  // Relations
+  areaId      String
+  area        Area     @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("area_reviews")
+  @@index([areaId, reviewDate])
+  @@index([userId, reviewDate])
+  @@index([reviewType])
+}
+
+enum ReviewType {
+  SCHEDULED
+  AD_HOC
+  MILESTONE
+  CRISIS
 }
 
 // =============================================================================
@@ -362,6 +493,7 @@ model Resource {
   projects       Project[]    @relation("ProjectResources")
   areas          Area[]       @relation("AreaResources")
   notes          Note[]       @relation("NoteResources")
+  subInterests   SubInterest[] @relation("SubInterestResources")
 
   // Chat Relations
   chats          Chat[]
@@ -676,6 +808,22 @@ enum AreaType {
   CAREER
   PERSONAL
   OTHER
+}
+
+enum ResponsibilityLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ReviewFrequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  BIANNUALLY
+  ANNUALLY
+  CUSTOM
 }
 
 enum ResourceType {
