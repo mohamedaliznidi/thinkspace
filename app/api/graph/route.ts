@@ -105,49 +105,57 @@ export async function GET(request: NextRequest) {
       ...projects.map(p => ({
         id: p.id,
         label: p.title,
-        type: 'project',
+        type: 'project' as const,
         status: p.status,
         priority: p.priority,
         color: '#228be6', // Blue for projects
         size: 20,
-        createdAt: p.createdAt,
+        connectionCount: 0, // Will be calculated below
+        createdAt: p.createdAt.toISOString(),
       })),
       ...areas.map(a => ({
         id: a.id,
         label: a.title,
-        type: 'area',
+        type: 'area' as const,
         areaType: a.type,
         color: a.color || '#7950f2', // Purple for areas
         size: 25,
-        createdAt: a.createdAt,
+        connectionCount: 0, // Will be calculated below
+        createdAt: a.createdAt.toISOString(),
       })),
       ...resources.map(r => ({
         id: r.id,
         label: r.title,
-        type: 'resource',
+        type: 'resource' as const,
         resourceType: r.type,
         color: '#51cf66', // Green for resources
         size: 15,
-        createdAt: r.createdAt,
+        connectionCount: 0, // Will be calculated below
+        createdAt: r.createdAt.toISOString(),
       })),
       ...notes.map(n => ({
         id: n.id,
         label: n.title,
-        type: 'note',
+        type: 'note' as const,
         noteType: n.type,
         color: '#868e96', // Gray for notes
         size: 10,
-        createdAt: n.createdAt,
+        connectionCount: 0, // Will be calculated below
+        createdAt: n.createdAt.toISOString(),
       })),
     ];
 
     // Create edges based on relationships
     const edges: Array<{
       id: string;
-      from: string;
-      to: string;
+      source: string;
+      target: string;
       type: string;
       label: string;
+      strength: number;
+      color: string;
+      width: number;
+      createdAt: string;
     }> = [];
 
     // Project -> Area relationships
@@ -155,10 +163,14 @@ export async function GET(request: NextRequest) {
       project.areas.forEach(area => {
         edges.push({
           id: `${project.id}-${area.id}`,
-          from: project.id,
-          to: area.id,
-          type: 'belongs_to',
+          source: project.id,
+          target: area.id,
+          type: 'project_area',
           label: 'belongs to',
+          strength: 0.9,
+          color: '#e9ecef',
+          width: 2,
+          createdAt: new Date().toISOString(),
         });
       });
     });
@@ -168,19 +180,27 @@ export async function GET(request: NextRequest) {
       resource.projects.forEach(project => {
         edges.push({
           id: `${resource.id}-${project.id}`,
-          from: resource.id,
-          to: project.id,
-          type: 'supports',
+          source: resource.id,
+          target: project.id,
+          type: 'resource_project',
           label: 'supports',
+          strength: 0.8,
+          color: '#e9ecef',
+          width: 1.5,
+          createdAt: new Date().toISOString(),
         });
       });
       resource.areas.forEach(area => {
         edges.push({
           id: `${resource.id}-${area.id}`,
-          from: resource.id,
-          to: area.id,
-          type: 'relates_to',
+          source: resource.id,
+          target: area.id,
+          type: 'resource_area',
           label: 'relates to',
+          strength: 0.7,
+          color: '#e9ecef',
+          width: 1.5,
+          createdAt: new Date().toISOString(),
         });
       });
     });
@@ -190,28 +210,40 @@ export async function GET(request: NextRequest) {
       note.projects.forEach(project => {
         edges.push({
           id: `${note.id}-${project.id}`,
-          from: note.id,
-          to: project.id,
-          type: 'documents',
+          source: note.id,
+          target: project.id,
+          type: 'note_project',
           label: 'documents',
+          strength: 0.6,
+          color: '#e9ecef',
+          width: 1,
+          createdAt: new Date().toISOString(),
         });
       });
       note.areas.forEach(area => {
         edges.push({
           id: `${note.id}-${area.id}`,
-          from: note.id,
-          to: area.id,
-          type: 'notes_on',
+          source: note.id,
+          target: area.id,
+          type: 'note_area',
           label: 'notes on',
+          strength: 0.5,
+          color: '#e9ecef',
+          width: 1,
+          createdAt: new Date().toISOString(),
         });
       });
       note.resources.forEach(resource => {
         edges.push({
           id: `${note.id}-${resource.id}`,
-          from: note.id,
-          to: resource.id,
-          type: 'annotates',
+          source: note.id,
+          target: resource.id,
+          type: 'note_resource',
           label: 'annotates',
+          strength: 0.4,
+          color: '#e9ecef',
+          width: 1,
+          createdAt: new Date().toISOString(),
         });
       });
     });
@@ -228,26 +260,39 @@ export async function GET(request: NextRequest) {
         const currentNodes = Array.from(connectedNodeIds);
         currentNodes.forEach(nodeId => {
           edges.forEach(edge => {
-            if (edge.from === nodeId) connectedNodeIds.add(edge.to);
-            if (edge.to === nodeId) connectedNodeIds.add(edge.from);
+            if (edge.source === nodeId) connectedNodeIds.add(edge.target);
+            if (edge.target === nodeId) connectedNodeIds.add(edge.source);
           });
         });
       }
 
       filteredNodes = nodes.filter(node => connectedNodeIds.has(node.id));
-      filteredEdges = edges.filter(edge => 
-        connectedNodeIds.has(edge.from) && connectedNodeIds.has(edge.to)
+      filteredEdges = edges.filter(edge =>
+        connectedNodeIds.has(edge.source) && connectedNodeIds.has(edge.target)
       );
     }
 
     if (type && type !== 'full') {
       filteredNodes = filteredNodes.filter(node => node.type === type);
       filteredEdges = filteredEdges.filter(edge => {
-        const fromNode = filteredNodes.find(n => n.id === edge.from);
-        const toNode = filteredNodes.find(n => n.id === edge.to);
+        const fromNode = filteredNodes.find(n => n.id === edge.source);
+        const toNode = filteredNodes.find(n => n.id === edge.target);
         return fromNode && toNode;
       });
     }
+
+    // Calculate connection counts
+    const connectionCounts = new Map<string, number>();
+    filteredEdges.forEach(edge => {
+      connectionCounts.set(edge.source, (connectionCounts.get(edge.source) || 0) + 1);
+      connectionCounts.set(edge.target, (connectionCounts.get(edge.target) || 0) + 1);
+    });
+
+    // Update nodes with connection counts
+    filteredNodes = filteredNodes.map(node => ({
+      ...node,
+      connectionCount: connectionCounts.get(node.id) || 0,
+    }));
 
     const graphData = {
       nodes: filteredNodes,
@@ -255,11 +300,37 @@ export async function GET(request: NextRequest) {
       stats: {
         totalNodes: filteredNodes.length,
         totalEdges: filteredEdges.length,
-        nodeTypes: {
+        density: filteredNodes.length > 1 ? (2 * filteredEdges.length) / (filteredNodes.length * (filteredNodes.length - 1)) : 0,
+        avgDegree: filteredNodes.length > 0 ? (2 * filteredEdges.length) / filteredNodes.length : 0,
+        nodeDistribution: {
           projects: filteredNodes.filter(n => n.type === 'project').length,
           areas: filteredNodes.filter(n => n.type === 'area').length,
           resources: filteredNodes.filter(n => n.type === 'resource').length,
           notes: filteredNodes.filter(n => n.type === 'note').length,
+        },
+        relationshipDistribution: {
+          direct_reference: 0,
+          shared_tag: 0,
+          content_similarity: 0,
+          temporal_proximity: 0,
+          project_area: filteredEdges.filter(e => e.type === 'project_area').length,
+          resource_project: filteredEdges.filter(e => e.type === 'resource_project').length,
+          resource_area: filteredEdges.filter(e => e.type === 'resource_area').length,
+          note_project: filteredEdges.filter(e => e.type === 'note_project').length,
+          note_area: filteredEdges.filter(e => e.type === 'note_area').length,
+          note_resource: filteredEdges.filter(e => e.type === 'note_resource').length,
+          custom: 0,
+        },
+        centrality: {
+          mostConnected: filteredNodes
+            .sort((a, b) => b.connectionCount - a.connectionCount)
+            .slice(0, 10)
+            .map(node => ({
+              nodeId: node.id,
+              connections: node.connectionCount,
+              score: node.connectionCount,
+            })),
+          clusters: [],
         },
       },
     };

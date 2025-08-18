@@ -1,221 +1,210 @@
 /**
  * Knowledge Graph Page for ThinkSpace
- * 
- * This page provides an interactive visualization of the knowledge graph
- * showing relationships between projects, areas, resources, and notes.
+ *
+ * Comprehensive interactive visualization of the knowledge graph with advanced
+ * features including analytics, relationship management, and visual search.
  */
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Stack,
   Title,
   Group,
-  Button,
   Card,
   Text,
-  Select,
   ActionIcon,
-  Badge,
   Alert,
   Center,
   Loader,
-  Paper,
-  Grid,
-  Switch,
+  SegmentedControl,
+  Drawer,
+  Button,
 } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
 import {
   IconNetwork,
-  IconZoomIn,
-  IconZoomOut,
   IconRefresh,
   IconSettings,
   IconAlertTriangle,
-  IconTarget,
-  IconMap,
-  IconBookmark,
-  IconNote,
+  IconChartDots,
+  IconAdjustments,
+  IconSearch,
+  IconShare,
 } from '@tabler/icons-react';
-
-interface GraphNode {
-  id: string;
-  label: string;
-  type: 'project' | 'area' | 'resource' | 'note';
-  color: string;
-  size: number;
-  x?: number;
-  y?: number;
-}
-
-interface GraphEdge {
-  id: string;
-  from: string;
-  to: string;
-  type: string;
-  label: string;
-}
-
-interface GraphData {
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-  stats: {
-    totalNodes: number;
-    totalEdges: number;
-    nodeTypes: {
-      projects: number;
-      areas: number;
-      resources: number;
-      notes: number;
-    };
-  };
-}
+import {
+  GraphVisualization,
+  GraphNavigation,
+  RelationshipManager,
+  GraphAnalyticsDashboard,
+  GraphAdvancedFeatures,
+  useGraphLayout,
+} from '@/components/graph';
+import { GraphResponsiveWrapper } from '@/components/graph/GraphResponsiveWrapper';
+import { useGraphData } from '@/hooks/useGraphData';
+import type {
+  GraphLayout,
+  GraphFocusMode,
+  GraphVisualizationConfig,
+  GraphInteractionEvent,
+  GraphNode,
+  GraphEdge,
+  GraphSearchResult,
+  GraphExportOptions,
+  GraphAnalytics,
+} from '@/types/graph';
 
 export default function GraphPage() {
-  const [graphData, setGraphData] = useState<GraphData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedNodeType, setSelectedNodeType] = useState<string>('');
-  const [showLabels, setShowLabels] = useState(true);
-  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  // State management
+  const [layout, setLayout] = useState<GraphLayout>('force');
+  const [focusMode, setFocusMode] = useState<GraphFocusMode>('overview');
+  const [selectedNodes, setSelectedNodes] = useState<string[]>([]);
+  const [selectedEdges, setSelectedEdges] = useState<string[]>([]);
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [analytics, setAnalytics] = useState<GraphAnalytics | null>(null);
+  const [isAnalyticsLoading, setIsAnalyticsLoading] = useState(false);
 
-  // Fetch graph data
-  const fetchGraphData = async () => {
+  // Drawer states
+  const [navigationDrawerOpened, { open: openNavigationDrawer, close: closeNavigationDrawer }] = useDisclosure(false);
+  const [relationshipDrawerOpened, { open: openRelationshipDrawer, close: closeRelationshipDrawer }] = useDisclosure(false);
+  const [analyticsDrawerOpened, { open: openAnalyticsDrawer, close: closeAnalyticsDrawer }] = useDisclosure(false);
+  const [advancedDrawerOpened, { open: openAdvancedDrawer, close: closeAdvancedDrawer }] = useDisclosure(false);
+
+  // Graph data and layout management
+  const { data, isLoading, error, refetch, updateFilters, exportGraph } = useGraphData({
+    autoRefresh: true,
+    refreshInterval: 60000, // 1 minute
+  });
+
+  const { applyLayout, availableLayouts } = useGraphLayout();
+
+  // Graph configuration
+  const [config, setConfig] = useState<GraphVisualizationConfig>({
+    width: 800,
+    height: 600,
+    layout: 'force',
+    nodeSize: { min: 8, max: 30, scale: 'sqrt' },
+    forceSettings: {
+      linkDistance: 100,
+      linkStrength: 0.5,
+      chargeStrength: -300,
+      centerStrength: 0.1,
+      collisionRadius: 20,
+    },
+    showLabels: true,
+    showEdgeLabels: false,
+    enableZoom: true,
+    enablePan: true,
+    enableDrag: true,
+    colorScheme: {
+      projects: '#228be6',
+      areas: '#7950f2',
+      resources: '#51cf66',
+      notes: '#868e96',
+      edges: '#e9ecef',
+      background: '#ffffff',
+    },
+    animationDuration: 1000,
+    enableAnimations: true,
+    clickToSelect: true,
+    hoverEffects: true,
+    contextMenuEnabled: true,
+  });
+
+  // Apply layout to graph data
+  const processedData = useMemo(() => {
+    if (!data) return null;
+    return applyLayout(data, layout);
+  }, [data, layout, applyLayout]);
+
+  // Fetch analytics data
+  const fetchAnalytics = useCallback(async () => {
+    if (!data) return;
+
+    setIsAnalyticsLoading(true);
     try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        ...(selectedNodeType && { type: selectedNodeType }),
-      });
-
-      const response = await fetch(`/api/graph?${params}`);
-      
+      const response = await fetch('/api/graph/analytics');
       if (response.ok) {
-        const data = await response.json();
-        setGraphData(data.data);
-        setError(null);
-      } else {
-        throw new Error('Failed to fetch graph data');
+        const result = await response.json();
+        setAnalytics(result.data);
       }
     } catch (error) {
-      console.error('Error fetching graph data:', error);
-      setError('Failed to load graph data');
+      console.error('Failed to fetch analytics:', error);
     } finally {
-      setLoading(false);
+      setIsAnalyticsLoading(false);
     }
-  };
+  }, [data]);
 
-  // Simple canvas-based graph visualization
-  const drawGraph = () => {
-    if (!graphData || !canvasRef.current) return;
+  // Event handlers
+  const handleNodeClick = useCallback((node: GraphNode, event: GraphInteractionEvent) => {
+    if (event.modifiers?.ctrl) {
+      // Multi-select with Ctrl
+      setSelectedNodes(prev =>
+        prev.includes(node.id)
+          ? prev.filter(id => id !== node.id)
+          : [...prev, node.id]
+      );
+    } else {
+      setSelectedNodes([node.id]);
+    }
+  }, []);
 
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+  const handleEdgeClick = useCallback((edge: GraphEdge, event: GraphInteractionEvent) => {
+    setSelectedEdges([edge.id]);
+  }, []);
 
-    // Set canvas size
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
+  const handleNodeHover = useCallback((node: GraphNode | null) => {
+    setHoveredNode(node?.id || null);
+  }, []);
 
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const handleConfigChange = useCallback((newConfig: Partial<GraphVisualizationConfig>) => {
+    setConfig(prev => ({ ...prev, ...newConfig }));
+  }, []);
 
-    const { nodes, edges } = graphData;
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const radius = Math.min(canvas.width, canvas.height) * 0.3;
+  const handleZoomToFit = useCallback(() => {
+    // This would be handled by the graph visualization component
+  }, []);
 
-    // Position nodes in a circle (simple layout)
-    nodes.forEach((node, index) => {
-      const angle = (index / nodes.length) * 2 * Math.PI;
-      node.x = centerX + Math.cos(angle) * radius;
-      node.y = centerY + Math.sin(angle) * radius;
-    });
+  const handleZoomToNode = useCallback((nodeId: string) => {
+    // This would be handled by the graph visualization component
+  }, []);
 
-    // Draw edges
-    ctx.strokeStyle = '#e9ecef';
-    ctx.lineWidth = 1;
-    edges.forEach(edge => {
-      const fromNode = nodes.find(n => n.id === edge.from);
-      const toNode = nodes.find(n => n.id === edge.to);
-      
-      if (fromNode && toNode && fromNode.x && fromNode.y && toNode.x && toNode.y) {
-        ctx.beginPath();
-        ctx.moveTo(fromNode.x, fromNode.y);
-        ctx.lineTo(toNode.x, toNode.y);
-        ctx.stroke();
-      }
-    });
+  // Search functionality
+  const handleSearch = useCallback(async (query: string): Promise<GraphSearchResult> => {
+    // Mock implementation - would call actual search API
+    const filteredNodes = data?.nodes.filter(node =>
+      node.label.toLowerCase().includes(query.toLowerCase())
+    ) || [];
 
-    // Draw nodes
-    nodes.forEach(node => {
-      if (!node.x || !node.y) return;
+    const filteredEdges = data?.edges.filter(edge =>
+      edge.label?.toLowerCase().includes(query.toLowerCase())
+    ) || [];
 
-      // Draw node circle
-      ctx.fillStyle = node.color;
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, node.size, 0, 2 * Math.PI);
-      ctx.fill();
+    return {
+      nodes: filteredNodes,
+      edges: filteredEdges,
+      query,
+      totalResults: filteredNodes.length + filteredEdges.length,
+    };
+  }, [data]);
 
-      // Draw node border
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+  // Node highlighting
+  const handleNodeHighlight = useCallback((nodeIds: string[]) => {
+    // Update highlighted nodes in the graph
+    setSelectedNodes(nodeIds);
+  }, []);
 
-      // Draw labels if enabled
-      if (showLabels) {
-        ctx.fillStyle = '#000000';
-        ctx.font = '12px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(
-          node.label.length > 15 ? node.label.substring(0, 15) + '...' : node.label,
-          node.x,
-          node.y + node.size + 15
-        );
-      }
-    });
-  };
+  const handleEdgeHighlight = useCallback((edgeIds: string[]) => {
+    setSelectedEdges(edgeIds);
+  }, []);
 
-  // Handle canvas click
-  const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!graphData || !canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-
-    // Find clicked node
-    const clickedNode = graphData.nodes.find(node => {
-      if (!node.x || !node.y) return false;
-      const distance = Math.sqrt((x - node.x) ** 2 + (y - node.y) ** 2);
-      return distance <= node.size;
-    });
-
-    setSelectedNode(clickedNode || null);
-  };
-
+  // Fetch analytics on data change
   useEffect(() => {
-    fetchGraphData();
-  }, [selectedNodeType]);
+    fetchAnalytics();
+  }, [fetchAnalytics]);
 
-  useEffect(() => {
-    if (graphData) {
-      drawGraph();
-    }
-  }, [graphData, showLabels]);
-
-  const getNodeTypeIcon = (type: string) => {
-    switch (type) {
-      case 'project': return <IconTarget size="1rem" />;
-      case 'area': return <IconMap size="1rem" />;
-      case 'resource': return <IconBookmark size="1rem" />;
-      case 'note': return <IconNote size="1rem" />;
-      default: return <IconNetwork size="1rem" />;
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <Center h="50vh">
         <Stack gap="md" align="center">
@@ -243,153 +232,206 @@ export default function GraphPage() {
             Knowledge Graph
           </Title>
           <Text c="dimmed" size="sm">
-            Visualize connections between your projects, areas, resources, and notes
+            Interactive visualization of your knowledge network with advanced analytics
           </Text>
         </div>
-        
+
         <Group gap="sm">
-          <ActionIcon variant="outline" onClick={fetchGraphData}>
+          <ActionIcon variant="outline" onClick={refetch}>
             <IconRefresh size="1rem" />
           </ActionIcon>
-          <ActionIcon variant="outline">
-            <IconZoomIn size="1rem" />
+          <ActionIcon variant="outline" onClick={openNavigationDrawer}>
+            <IconSettings size="1rem" />
           </ActionIcon>
-          <ActionIcon variant="outline">
-            <IconZoomOut size="1rem" />
+          <ActionIcon variant="outline" onClick={openAnalyticsDrawer}>
+            <IconChartDots size="1rem" />
+          </ActionIcon>
+          <ActionIcon variant="outline" onClick={openAdvancedDrawer}>
+            <IconSearch size="1rem" />
           </ActionIcon>
         </Group>
       </Group>
 
-      <Grid>
-        {/* Controls */}
-        <Grid.Col span={{ base: 12, md: 3 }}>
-          <Stack gap="md">
-            {/* Filters */}
-            <Card padding="md" radius="md" withBorder>
-              <Stack gap="sm">
-                <Text fw={600} size="sm">Filters</Text>
-                
-                <Select
-                  label="Node Type"
-                  placeholder="All types"
-                  data={[
-                    { value: '', label: 'All Types' },
-                    { value: 'project', label: 'Projects' },
-                    { value: 'area', label: 'Areas' },
-                    { value: 'resource', label: 'Resources' },
-                    { value: 'note', label: 'Notes' },
-                  ]}
-                  value={selectedNodeType}
-                  onChange={(value) => setSelectedNodeType(value || '')}
-                />
+      {/* Layout Controls */}
+      <Card padding="md" radius="md" withBorder>
+        <Group justify="space-between" align="center">
+          <Group gap="md">
+            <Text fw={600} size="sm">Layout:</Text>
+            <SegmentedControl
+              value={layout}
+              onChange={(value) => setLayout(value as GraphLayout)}
+              data={availableLayouts.map(({ key, engine }) => ({
+                value: key,
+                label: engine.name,
+              }))}
+              size="sm"
+            />
+          </Group>
 
-                <Switch
-                  label="Show Labels"
-                  checked={showLabels}
-                  onChange={(e) => setShowLabels(e.currentTarget.checked)}
-                />
-              </Stack>
-            </Card>
+          <Group gap="sm">
+            <Button
+              variant="light"
+              size="xs"
+              leftSection={<IconAdjustments size="0.8rem" />}
+              onClick={openRelationshipDrawer}
+            >
+              Relationships
+            </Button>
+            <Button
+              variant="light"
+              size="xs"
+              leftSection={<IconShare size="0.8rem" />}
+              onClick={openAdvancedDrawer}
+            >
+              Share & Export
+            </Button>
+          </Group>
+        </Group>
+      </Card>
 
-            {/* Statistics */}
-            {graphData && (
-              <Card padding="md" radius="md" withBorder>
-                <Stack gap="sm">
-                  <Text fw={600} size="sm">Statistics</Text>
-                  
-                  <Group justify="space-between">
-                    <Text size="sm">Total Nodes</Text>
-                    <Badge variant="light">{graphData.stats.totalNodes}</Badge>
-                  </Group>
-                  
-                  <Group justify="space-between">
-                    <Text size="sm">Total Connections</Text>
-                    <Badge variant="light">{graphData.stats.totalEdges}</Badge>
-                  </Group>
+      {/* Main Graph Visualization */}
+      <Card padding="md" radius="md" withBorder style={{ height: '70vh' }}>
+        {processedData ? (
+          <GraphResponsiveWrapper
+            data={processedData}
+            config={config}
+            onNodeClick={handleNodeClick}
+            onEdgeClick={handleEdgeClick}
+            onNodeHover={handleNodeHover}
+            enableAccessibility={true}
+            enableKeyboardNavigation={true}
+            enableScreenReader={true}
+          >
+            <GraphVisualization
+              data={processedData}
+              config={config}
+              onNodeClick={handleNodeClick}
+              onEdgeClick={handleEdgeClick}
+              onNodeHover={handleNodeHover}
+              style={{ width: '100%', height: '100%' }}
+            />
+          </GraphResponsiveWrapper>
+        ) : (
+          <Center h="100%">
+            <Stack gap="md" align="center">
+              <IconNetwork size="3rem" color="var(--mantine-color-gray-5)" />
+              <Text size="lg" fw={500}>No graph data available</Text>
+              <Text size="sm" c="dimmed" ta="center">
+                Create some projects, areas, resources, and notes to see connections
+              </Text>
+            </Stack>
+          </Center>
+        )}
+      </Card>
 
-                  <Stack gap="xs" mt="sm">
-                    <Group justify="space-between">
-                      <Group gap="xs">
-                        <IconTarget size="0.8rem" color="var(--mantine-color-blue-6)" />
-                        <Text size="xs">Projects</Text>
-                      </Group>
-                      <Text size="xs">{graphData.stats.nodeTypes.projects}</Text>
-                    </Group>
-                    
-                    <Group justify="space-between">
-                      <Group gap="xs">
-                        <IconMap size="0.8rem" color="var(--mantine-color-purple-6)" />
-                        <Text size="xs">Areas</Text>
-                      </Group>
-                      <Text size="xs">{graphData.stats.nodeTypes.areas}</Text>
-                    </Group>
-                    
-                    <Group justify="space-between">
-                      <Group gap="xs">
-                        <IconBookmark size="0.8rem" color="var(--mantine-color-green-6)" />
-                        <Text size="xs">Resources</Text>
-                      </Group>
-                      <Text size="xs">{graphData.stats.nodeTypes.resources}</Text>
-                    </Group>
-                    
-                    <Group justify="space-between">
-                      <Group gap="xs">
-                        <IconNote size="0.8rem" color="var(--mantine-color-gray-6)" />
-                        <Text size="xs">Notes</Text>
-                      </Group>
-                      <Text size="xs">{graphData.stats.nodeTypes.notes}</Text>
-                    </Group>
-                  </Stack>
-                </Stack>
-              </Card>
-            )}
+      {/* Navigation Drawer */}
+      <Drawer
+        opened={navigationDrawerOpened}
+        onClose={closeNavigationDrawer}
+        title="Graph Navigation"
+        position="left"
+        size="md"
+      >
+        {processedData && (
+          <GraphNavigation
+            data={processedData}
+            selectedNodes={selectedNodes}
+            hoveredNode={hoveredNode}
+            focusMode={focusMode}
+            onNodeSelect={setSelectedNodes}
+            onFocusModeChange={setFocusMode}
+            onNodeAction={(action, nodeId) => {
+              // Handle node actions
+              console.log('Node action:', action, nodeId);
+            }}
+            onZoomToNode={handleZoomToNode}
+            onZoomToFit={handleZoomToFit}
+            onShowPath={(startId, endId) => {
+              // Handle path finding
+              console.log('Show path:', startId, endId);
+            }}
+          />
+        )}
+      </Drawer>
 
-            {/* Selected Node Details */}
-            {selectedNode && (
-              <Card padding="md" radius="md" withBorder>
-                <Stack gap="sm">
-                  <Group gap="xs">
-                    {getNodeTypeIcon(selectedNode.type)}
-                    <Text fw={600} size="sm">Selected Node</Text>
-                  </Group>
-                  
-                  <Text size="sm">{selectedNode.label}</Text>
-                  <Badge size="sm" variant="light" color={selectedNode.color}>
-                    {selectedNode.type}
-                  </Badge>
-                </Stack>
-              </Card>
-            )}
-          </Stack>
-        </Grid.Col>
+      {/* Relationship Management Drawer */}
+      <Drawer
+        opened={relationshipDrawerOpened}
+        onClose={closeRelationshipDrawer}
+        title="Relationship Management"
+        position="right"
+        size="lg"
+      >
+        {processedData && (
+          <RelationshipManager
+            data={processedData}
+            selectedNodes={selectedNodes}
+            onUpdateRelationship={(edgeId, updates) => {
+              // Handle relationship updates
+              console.log('Update relationship:', edgeId, updates);
+            }}
+            onCreateRelationship={(relationship) => {
+              // Handle relationship creation
+              console.log('Create relationship:', relationship);
+            }}
+            onDeleteRelationship={(edgeId) => {
+              // Handle relationship deletion
+              console.log('Delete relationship:', edgeId);
+            }}
+            onFilterChange={(filters) => {
+              // Handle filter changes
+              console.log('Filter change:', filters);
+            }}
+          />
+        )}
+      </Drawer>
 
-        {/* Graph Visualization */}
-        <Grid.Col span={{ base: 12, md: 9 }}>
-          <Card padding="md" radius="md" withBorder style={{ height: '600px' }}>
-            {graphData && graphData.nodes.length > 0 ? (
-              <canvas
-                ref={canvasRef}
-                onClick={handleCanvasClick}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  cursor: 'pointer',
-                }}
-              />
-            ) : (
-              <Center h="100%">
-                <Stack gap="md" align="center">
-                  <IconNetwork size="3rem" color="var(--mantine-color-gray-5)" />
-                  <Text size="lg" fw={500}>No graph data available</Text>
-                  <Text size="sm" c="dimmed" ta="center">
-                    Create some projects, areas, resources, and notes to see connections
-                  </Text>
-                </Stack>
-              </Center>
-            )}
-          </Card>
-        </Grid.Col>
-      </Grid>
+      {/* Analytics Dashboard Drawer */}
+      <Drawer
+        opened={analyticsDrawerOpened}
+        onClose={closeAnalyticsDrawer}
+        title="Graph Analytics"
+        position="right"
+        size="xl"
+      >
+        {processedData && (
+          <GraphAnalyticsDashboard
+            data={processedData}
+            analytics={analytics}
+            isLoading={isAnalyticsLoading}
+            onRefresh={fetchAnalytics}
+            onNodeFocus={handleZoomToNode}
+            onExportAnalytics={() => {
+              // Handle analytics export
+              console.log('Export analytics');
+            }}
+          />
+        )}
+      </Drawer>
+
+      {/* Advanced Features Drawer */}
+      <Drawer
+        opened={advancedDrawerOpened}
+        onClose={closeAdvancedDrawer}
+        title="Advanced Features"
+        position="right"
+        size="md"
+      >
+        {processedData && (
+          <GraphAdvancedFeatures
+            data={processedData}
+            config={config}
+            onSearch={handleSearch}
+            onExport={exportGraph}
+            onConfigChange={handleConfigChange}
+            onNodeHighlight={handleNodeHighlight}
+            onEdgeHighlight={handleEdgeHighlight}
+            onZoomToFit={handleZoomToFit}
+            onZoomToNode={handleZoomToNode}
+            onRefresh={refetch}
+          />
+        )}
+      </Drawer>
     </Stack>
   );
 }
