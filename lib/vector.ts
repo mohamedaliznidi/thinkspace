@@ -11,8 +11,8 @@ import { OpenAI } from 'openai';
 
 // Initialize OpenRouter client (compatible with OpenAI API)
 const openai = new OpenAI({
-  apiKey: "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",
-  baseURL: 'https://api.openai.com/v1',
+  apiKey: process.env.OPENROUTER_API_KEY!,
+  baseURL: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
 });
 
 // Vector configuration

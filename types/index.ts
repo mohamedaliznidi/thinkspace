@@ -12,6 +12,9 @@ export * from './task';
 // Import and re-export centralized project types
 export * from './project';
 
+// Import and re-export enhanced resource types
+export * from './resources';
+
 import type {
   User,
   Project,

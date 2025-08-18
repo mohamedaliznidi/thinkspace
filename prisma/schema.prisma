@@ -71,6 +71,12 @@ model User {
   // Search Relations
   searches  Search[]
 
+  // Enhanced Resource Relations
+  resourceFolders    ResourceFolder[]
+  resourceSummaries  ResourceSummary[]
+  resourceReferences ResourceReference[]
+  resourceCollections ResourceCollection[]
+
   @@map("users")
 }
 
@@ -114,6 +120,9 @@ model Note {
 
   // Activity Relations
   activities      Activity[]
+
+  // Resource Reference Relations
+  resourceReferences ResourceReference[]
 
   // Timestamps
   createdAt       DateTime @default(now())
@@ -176,6 +185,9 @@ model Project {
   // Template Relations
   templateId  String?
   template    ProjectTemplate?    @relation("ProjectTemplate", fields: [templateId], references: [id])
+
+  // Resource Reference Relations
+  resourceReferences ResourceReference[]
 
   // Timestamps
   createdAt   DateTime     @default(now())
@@ -352,6 +364,9 @@ model Area {
   // Review History
   areaReviews AreaReview[]
 
+  // Resource Reference Relations
+  resourceReferences ResourceReference[]
+
   // Timestamps
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -481,9 +496,25 @@ model Resource {
   // Vector embedding for semantic search
   embedding      Unsupported("vector(1536)")?
 
-  // Metadata
+  // Enhanced metadata for PRD features
   tags           String[]
   metadata       Json?
+
+  // Content analysis fields
+  extractedTopics String[]     @default([])
+  contentLanguage String?
+  wordCount      Int?
+  readingTime    Int?         // in minutes
+
+  // Organization fields
+  folderId       String?
+  folder         ResourceFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  // Duplicate detection
+  contentHash    String?
+  duplicateOf    String?
+  duplicateResource Resource? @relation("ResourceDuplicates", fields: [duplicateOf], references: [id], onDelete: SetNull)
+  duplicates     Resource[] @relation("ResourceDuplicates")
 
   // Relations
   userId         String
@@ -508,6 +539,12 @@ model Resource {
   // Activity Relations
   activities     Activity[]
 
+  // Enhanced relations for PRD features
+  summaries      ResourceSummary[]
+  references     ResourceReference[] @relation("ResourceReferences")
+  referencedBy   ResourceReference[] @relation("ReferencedResource")
+  collections    ResourceCollection[] @relation("CollectionResources")
+
   // Timestamps
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -515,6 +552,9 @@ model Resource {
   @@map("resources")
   @@index([userId, type])
   @@index([createdAt])
+  @@index([folderId])
+  @@index([contentHash])
+  @@index([duplicateOf])
 }
 
 // =============================================================================
@@ -744,6 +784,132 @@ model GraphSnapshot {
 }
 
 // =============================================================================
+// RESOURCE MANAGEMENT MODELS
+// =============================================================================
+
+model ResourceFolder {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String?  @default("#6366f1")
+
+  // Hierarchy support
+  parentId    String?
+  parent      ResourceFolder? @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children    ResourceFolder[] @relation("FolderHierarchy")
+
+  // Path for efficient queries (e.g., "/parent/child/grandchild")
+  path        String
+  level       Int      @default(0)
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resources   Resource[]
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("resource_folders")
+  @@index([userId, parentId])
+  @@index([path])
+  @@unique([userId, name, parentId])
+}
+
+model ResourceSummary {
+  id          String        @id @default(cuid())
+  content     String
+  type        SummaryType   @default(GENERAL)
+  length      SummaryLength @default(MEDIUM)
+
+  // Quality and feedback
+  qualityScore Float?       // 0.0 to 1.0
+  isApproved   Boolean      @default(false)
+  feedback     String?
+
+  // AI generation metadata
+  model       String?
+  prompt      String?
+  generatedAt DateTime     @default(now())
+
+  // Relations
+  resourceId  String
+  resource    Resource     @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("resource_summaries")
+  @@index([resourceId])
+  @@index([qualityScore])
+}
+
+model ResourceReference {
+  id            String          @id @default(cuid())
+
+  // Reference context
+  context       String?         // Where/how the resource is referenced
+  snippet       String?         // Relevant text snippet
+  referenceType ReferenceType   @default(MANUAL)
+
+  // Relations
+  resourceId    String
+  resource      Resource        @relation("ResourceReferences", fields: [resourceId], references: [id], onDelete: Cascade)
+
+  referencedResourceId String?
+  referencedResource   Resource? @relation("ReferencedResource", fields: [referencedResourceId], references: [id], onDelete: Cascade)
+
+  // Can reference different entity types
+  projectId     String?
+  project       Project?        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  areaId        String?
+  area          Area?           @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  noteId        String?
+  note          Note?           @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Timestamps
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@map("resource_references")
+  @@index([resourceId])
+  @@index([referencedResourceId])
+  @@index([projectId])
+  @@index([areaId])
+  @@index([noteId])
+}
+
+model ResourceCollection {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String?  @default("#10b981")
+  isPublic    Boolean  @default(false)
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resources   Resource[] @relation("CollectionResources")
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("resource_collections")
+  @@index([userId])
+  @@unique([userId, name])
+}
+
+// =============================================================================
 // ENUMS
 // =============================================================================
 
@@ -889,4 +1055,29 @@ enum ConnectionType {
   MANUAL
   AI_SUGGESTED
   AUTO_GENERATED
+}
+
+enum SummaryType {
+  GENERAL
+  TECHNICAL
+  EXECUTIVE
+  BRIEF
+  DETAILED
+  LAYMAN
+}
+
+enum SummaryLength {
+  SHORT
+  MEDIUM
+  LONG
+  CUSTOM
+}
+
+enum ReferenceType {
+  MANUAL
+  AI_SUGGESTED
+  AUTO_GENERATED
+  CITATION
+  MENTION
+  RELATED
 }
