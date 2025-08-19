@@ -47,6 +47,7 @@ import {
   IconList,
   IconLayoutKanban,
   IconSubtask,
+  IconLink,
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
@@ -56,6 +57,8 @@ import { TaskList, TaskKanban, TaskForm } from '@/components/tasks';
 import { GanttChart, Timeline, CriticalPath } from '@/components/planning';
 import { ProjectAnalytics, TaskAnalytics, TimeTracker } from '@/components/analytics';
 import { useTaskKeyboardShortcuts } from '@/hooks/useTaskKeyboardShortcuts';
+import { UniversalLinkManager } from '@/components/links/UniversalLinkManager';
+import { LinkSuggestions } from '@/components/links/LinkSuggestions';
 import Link from 'next/link';
 import type { TaskDisplay, ProjectDisplay, TaskPlanningData } from '@/types';
 
@@ -159,6 +162,7 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
+  const [linkManagerOpened, { open: openLinkManager, close: closeLinkManager }] = useDisclosure(false);
 
   // Task management state
   const [tasks, setTasks] = useState<TaskDisplay[]>([]);
@@ -504,6 +508,15 @@ export default function ProjectDetailPage() {
         
         <Group gap="sm">
           <Button
+            leftSection={<IconLink size="1rem" />}
+            color={getParaColor('projects')}
+            variant="outline"
+            onClick={openLinkManager}
+          >
+            Links
+          </Button>
+
+          <Button
             component={Link}
             href={`/projects/${projectId}/edit`}
             leftSection={<IconEdit size="1rem" />}
@@ -512,7 +525,7 @@ export default function ProjectDetailPage() {
           >
             Edit
           </Button>
-          
+
           <Menu shadow="md" width={200}>
             <Menu.Target>
               <ActionIcon variant="outline" color="gray">
@@ -579,6 +592,19 @@ export default function ProjectDetailPage() {
 
         <Tabs.Panel value="overview" pt="md">
           <Stack gap="lg">
+            {/* Link Suggestions */}
+            <LinkSuggestions
+              itemType="project"
+              itemId={projectId}
+              itemTitle={project.title}
+              itemTags={project.tags || []}
+              itemContent={project.description || ''}
+              onLinkCreated={() => {
+                // Refresh project data or show notification
+                console.log('Link created for project');
+              }}
+            />
+
             {/* Project Metadata */}
             <Card padding="lg" radius="md" withBorder>
               <Stack gap="md">
@@ -1110,6 +1136,19 @@ export default function ProjectDetailPage() {
           </Group>
         </Stack>
       </Modal>
+
+      {/* Universal Link Manager */}
+      <UniversalLinkManager
+        itemType="project"
+        itemId={projectId}
+        itemTitle={project.title}
+        opened={linkManagerOpened}
+        onClose={closeLinkManager}
+        onLinksUpdated={() => {
+          // Refresh project data or show notification
+          console.log('Links updated for project');
+        }}
+      />
     </Stack>
   );
 }

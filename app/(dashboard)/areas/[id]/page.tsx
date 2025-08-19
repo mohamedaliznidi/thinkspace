@@ -56,11 +56,14 @@ import {
   IconChartBar,
   IconSettings,
   IconPlus,
+  IconLink,
 } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { formatDistanceToNow, format } from 'date-fns';
 import { getParaColor } from '@/lib/theme';
+import { UniversalLinkManager } from '@/components/links/UniversalLinkManager';
+import { LinkSuggestions } from '@/components/links/LinkSuggestions';
 import Link from 'next/link';
 import AreaHealthIndicator from '@/components/areas/AreaHealthIndicator';
 import SubInterestTree from '@/components/areas/SubInterestTree';
@@ -81,6 +84,7 @@ interface Area {
   nextReviewDate?: string;
   standards?: any[];
   criteria?: any;
+  tags: string[];
   createdAt: string;
   updatedAt: string;
   projects: Array<{
@@ -149,6 +153,7 @@ export default function AreaDetailPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [subInterests, setSubInterests] = useState<SubInterestWithBasic[]>([]);
   const [deleteModalOpened, { open: openDeleteModal, close: closeDeleteModal }] = useDisclosure(false);
+  const [linkManagerOpened, { open: openLinkManager, close: closeLinkManager }] = useDisclosure(false);
 
   // Fetch area details
   const fetchArea = async () => {
@@ -368,6 +373,15 @@ export default function AreaDetailPage() {
         
         <Group gap="sm">
           <Button
+            leftSection={<IconLink size="1rem" />}
+            color={getParaColor('areas')}
+            variant="outline"
+            onClick={openLinkManager}
+          >
+            Links
+          </Button>
+
+          <Button
             component={Link}
             href={`/areas/${areaId}/edit`}
             leftSection={<IconEdit size="1rem" />}
@@ -376,7 +390,7 @@ export default function AreaDetailPage() {
           >
             Edit
           </Button>
-          
+
           <Menu shadow="md" width={200}>
             <Menu.Target>
               <ActionIcon variant="outline" color="gray">
@@ -480,6 +494,18 @@ export default function AreaDetailPage() {
 
         <Tabs.Panel value="overview" pt="md">
           <Stack gap="lg">
+            {/* Link Suggestions */}
+            <LinkSuggestions
+              itemType="area"
+              itemId={areaId}
+              itemTitle={area.title}
+              itemTags={(area.tags as string[]) || []}
+              itemContent={area.description || ''}
+              onLinkCreated={() => {
+                console.log('Link created for area');
+              }}
+            />
+
             {/* Quick Note Input */}
             <QuickNoteInput
               areaId={area.id}
@@ -748,6 +774,18 @@ export default function AreaDetailPage() {
           </Group>
         </Stack>
       </Modal>
+
+      {/* Universal Link Manager */}
+      <UniversalLinkManager
+        itemType="area"
+        itemId={areaId}
+        itemTitle={area.title}
+        opened={linkManagerOpened}
+        onClose={closeLinkManager}
+        onLinksUpdated={() => {
+          console.log('Links updated for area');
+        }}
+      />
     </Stack>
   );
 }

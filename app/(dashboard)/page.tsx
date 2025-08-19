@@ -41,6 +41,7 @@ import {
 } from '@tabler/icons-react';
 import { useUser } from '@/contexts/UserContext';
 import { getParaColor } from '@/lib/theme';
+import { LazyContainer } from '@/components/common/LazyLoader';
 import Link from 'next/link';
 
 interface DashboardStats {
@@ -275,80 +276,84 @@ export default function DashboardPage() {
 
       {/* Progress Overview */}
       {stats && stats.projects.total > 0 && (
-        <Paper p="lg" radius="md" withBorder>
-          <Group justify="space-between" mb="md">
-            <Title order={3}>Progress Overview</Title>
-            <Badge variant="light" color="blue">
-              {getCompletionRate()}% Complete
-            </Badge>
-          </Group>
-          
-          <Progress
-            value={getCompletionRate()}
-            size="lg"
-            radius="xl"
-            color="blue"
-            mb="md"
-          />
-          
-          <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
-            <Group>
-              <Text size="sm" c="dimmed">Active:</Text>
-              <Text size="sm" fw={500}>{stats.projects.active}</Text>
+        <LazyContainer>
+          <Paper p="lg" radius="md" withBorder>
+            <Group justify="space-between" mb="md">
+              <Title order={3}>Progress Overview</Title>
+              <Badge variant="light" color="blue">
+                {getCompletionRate()}% Complete
+              </Badge>
             </Group>
-            <Group>
-              <Text size="sm" c="dimmed">Completed:</Text>
-              <Text size="sm" fw={500}>{stats.projects.completed}</Text>
-            </Group>
-            <Group>
-              <Text size="sm" c="dimmed">Overdue:</Text>
-              <Text size="sm" fw={500} c="red">{stats.projects.overdue}</Text>
-            </Group>
-          </SimpleGrid>
-        </Paper>
+
+            <Progress
+              value={getCompletionRate()}
+              size="lg"
+              radius="xl"
+              color="blue"
+              mb="md"
+            />
+
+            <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
+              <Group>
+                <Text size="sm" c="dimmed">Active:</Text>
+                <Text size="sm" fw={500}>{stats.projects.active}</Text>
+              </Group>
+              <Group>
+                <Text size="sm" c="dimmed">Completed:</Text>
+                <Text size="sm" fw={500}>{stats.projects.completed}</Text>
+              </Group>
+              <Group>
+                <Text size="sm" c="dimmed">Overdue:</Text>
+                <Text size="sm" fw={500} c="red">{stats.projects.overdue}</Text>
+              </Group>
+            </SimpleGrid>
+          </Paper>
+        </LazyContainer>
       )}
 
       {/* Recent Activity */}
-      <Paper p="lg" radius="md" withBorder>
-        <Group justify="space-between" mb="md">
-          <Title order={3}>Recent Activity</Title>
-          <ActionIcon
-            component={Link}
-            href="/activity"
-            variant="subtle"
-            size="sm"
-          >
-            <IconArrowRight size="1rem" />
-          </ActionIcon>
-        </Group>
-        
-        {recentActivity.length > 0 ? (
-          <Stack gap="sm">
-            {recentActivity.slice(0, 5).map((activity) => (
-              <Group key={activity.id} justify="space-between" p="sm" style={{ borderRadius: 'var(--mantine-radius-sm)', backgroundColor: 'var(--mantine-color-gray-0)' }}>
-                <Group gap="sm">
-                  <Badge size="xs" variant="dot" color={getParaColor(activity.type === 'chat' ? 'projects' : activity.type as any)}>
-                    {activity.type}
-                  </Badge>
-                  <Text size="sm" fw={500} lineClamp={1}>
-                    {activity.action}
-                  </Text>
-                  <Text size="sm" lineClamp={1}>
-                    {activity.title}
+      <LazyContainer>
+        <Paper p="lg" radius="md" withBorder>
+          <Group justify="space-between" mb="md">
+            <Title order={3}>Recent Activity</Title>
+            <ActionIcon
+              component={Link}
+              href="/activity"
+              variant="subtle"
+              size="sm"
+            >
+              <IconArrowRight size="1rem" />
+            </ActionIcon>
+          </Group>
+
+          {recentActivity.length > 0 ? (
+            <Stack gap="sm">
+              {recentActivity.slice(0, 5).map((activity) => (
+                <Group key={activity.id} justify="space-between" p="sm" style={{ borderRadius: 'var(--mantine-radius-sm)', backgroundColor: 'var(--mantine-color-gray-0)' }}>
+                  <Group gap="sm">
+                    <Badge size="xs" variant="dot" color={getParaColor(activity.type === 'chat' ? 'projects' : activity.type as any)}>
+                      {activity.type}
+                    </Badge>
+                    <Text size="sm" fw={500} lineClamp={1}>
+                      {activity.action}
+                    </Text>
+                    <Text size="sm" lineClamp={1}>
+                      {activity.title}
+                    </Text>
+                  </Group>
+                  <Text size="xs" c="dimmed">
+                    {new Date(activity.timestamp).toLocaleDateString()}
                   </Text>
                 </Group>
-                <Text size="xs" c="dimmed">
-                  {new Date(activity.timestamp).toLocaleDateString()}
-                </Text>
-              </Group>
-            ))}
-          </Stack>
-        ) : (
-          <Text size="sm" c="dimmed" ta="center" py="xl">
-            No recent activity. Start by creating your first project!
-          </Text>
-        )}
-      </Paper>
+              ))}
+            </Stack>
+          ) : (
+            <Text size="sm" c="dimmed" ta="center" py="xl">
+              No recent activity. Start by creating your first project!
+            </Text>
+          )}
+        </Paper>
+      </LazyContainer>
     </Stack>
   );
 }

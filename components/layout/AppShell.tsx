@@ -40,6 +40,7 @@ import { Navbar } from './Navbar';
 import { spotlight } from '@mantine/spotlight';
 import Link from 'next/link';
 import { SearchSpotlight } from '../search/SearchSpotlight';
+import { RealtimeStatus } from '../realtime/RealtimeStatus';
 
 interface AppShellLayoutProps {
   children: React.ReactNode;
@@ -104,8 +105,11 @@ export function AppShellLayout({ children, breadcrumbs = [] }: AppShellLayoutPro
 
             {/* Right side - Actions and user menu */}
             <Group gap="sm">
+              {/* Real-time Status */}
+              <RealtimeStatus compact={true} />
+
               {/* Search */}
-              {/* <Tooltip label="Search (Ctrl+K)">
+              <Tooltip label="Search (Ctrl+K)">
                 <ActionIcon
                   variant="subtle"
                   size="lg"
@@ -113,7 +117,7 @@ export function AppShellLayout({ children, breadcrumbs = [] }: AppShellLayoutPro
                 >
                   <IconSearch size="1.2rem" />
                 </ActionIcon>
-              </Tooltip> */}
+              </Tooltip>
 
               {/* Notifications */}
               <Tooltip label="Notifications">

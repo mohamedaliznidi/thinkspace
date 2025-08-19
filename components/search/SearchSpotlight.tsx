@@ -167,7 +167,7 @@ export function SearchSpotlight({ opened, onClose }: SearchSpotlightProps) {
     ],
   };
 
-  // Search for content
+  // Search for content using enhanced universal search
   const searchContent = async (query: string) => {
     if (!query.trim() || query.length < 2) {
       setSearchResults([]);
@@ -175,20 +175,28 @@ export function SearchSpotlight({ opened, onClose }: SearchSpotlightProps) {
     }
 
     setIsSearching(true);
-    
+
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=10`);
-      
+      const params = new URLSearchParams({
+        q: query,
+        type: 'hybrid',
+        limit: '15',
+        contentTypes: 'projects,areas,resources,notes',
+      });
+
+      const response = await fetch(`/api/search?${params.toString()}`);
+
       if (response.ok) {
         const data = await response.json();
-        const results: SpotlightActionData[] = data.results.map((item: any) => ({
+        const results: SpotlightActionData[] = data.data.results.map((item: any) => ({
           id: `${item.type}-${item.id}`,
           label: item.title,
-          description: `${item.type} • ${item.description || 'No description'}`,
-          onClick: () => router.push(`/${item.type}s/${item.id}`),
+          description: `${item.category} • ${item.description || 'No description'}${item.similarity ? ` • ${(item.similarity * 100).toFixed(0)}% match` : ''}`,
+          onClick: () => router.push(item.href),
           leftSection: getIconForType(item.type),
+          keywords: item.tags?.join(' ') || '',
         }));
-        
+
         setSearchResults(results);
       }
     } catch (error) {

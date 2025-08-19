@@ -567,11 +567,22 @@ model Connection {
   createdBy ConnectionType  @default(MANUAL)
   metadata  Json?
 
+  // Generic polymorphic fields for universal linking
+  sourceType String?         // 'project', 'area', 'resource', 'note'
+  sourceId   String?         // ID of the source item
+  targetType String?         // 'project', 'area', 'resource', 'note'
+  targetId   String?         // ID of the target item
+
+  // Link type and relationship metadata
+  linkType   String?         // 'RELATED', 'DEPENDS_ON', 'BLOCKS', etc.
+  bidirectional Boolean      @default(true)
+  description   String?
+
   // Relations
   userId    String
   user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Polymorphic relations for source
+  // Polymorphic relations for source (kept for backward compatibility)
   sourceNoteId     String?
   sourceNote       Note?     @relation("SourceNote", fields: [sourceNoteId], references: [id])
   sourceProjectId  String?
@@ -581,7 +592,7 @@ model Connection {
   sourceResourceId String?
   sourceResource   Resource? @relation("SourceResource", fields: [sourceResourceId], references: [id])
 
-  // Polymorphic relations for target
+  // Polymorphic relations for target (kept for backward compatibility)
   targetNoteId     String?
   targetNote       Note?     @relation("TargetNote", fields: [targetNoteId], references: [id])
   targetProjectId  String?
@@ -598,6 +609,9 @@ model Connection {
   @@map("connections")
   @@index([userId])
   @@index([strength])
+  @@index([sourceType, sourceId])
+  @@index([targetType, targetId])
+  @@index([linkType])
 }
 
 // =============================================================================
@@ -1055,6 +1069,17 @@ enum ConnectionType {
   MANUAL
   AI_SUGGESTED
   AUTO_GENERATED
+}
+
+enum LinkType {
+  RELATED
+  DEPENDS_ON
+  BLOCKS
+  REFERENCES
+  CONTAINS
+  PART_OF
+  SIMILAR_TO
+  CUSTOM
 }
 
 enum SummaryType {

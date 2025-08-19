@@ -39,6 +39,7 @@ import {
 } from '@tabler/icons-react';
 import Link from 'next/link';
 import { getParaColor } from '@/lib/theme';
+import { TagNavigation } from '../tags/TagNavigation';
 
 interface NavItem {
   label: string;
@@ -291,6 +292,11 @@ export function Navbar() {
           active={pathname.startsWith('/notes')}
           style={{ borderRadius: 'var(--mantine-radius-md)' }}
         />
+
+        <Divider />
+
+        {/* Tag Navigation */}
+        <TagNavigation compact={true} maxTags={10} />
 
         <Divider />
 

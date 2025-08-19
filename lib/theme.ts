@@ -281,6 +281,7 @@ export const theme = createTheme({
       areas: '#7950f2',       // Purple
       resources: '#51cf66',   // Green
       archive: '#868e96',     // Gray
+      notes: '#fd7e14'        // Orange
     },
     
     // Knowledge graph colors
@@ -302,7 +303,7 @@ export const theme = createTheme({
 });
 
 // Export theme-related utilities
-export const getParaColor = (type: 'projects' | 'areas' | 'resources' | 'archive'): string => {
+export const getParaColor = (type: 'projects' | 'areas' | 'resources' | 'archive' | 'notes'): string => {
   return theme.other?.paraColors[type];
 };
 

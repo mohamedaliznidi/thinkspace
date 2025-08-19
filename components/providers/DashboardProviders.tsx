@@ -12,6 +12,7 @@ import { Session } from 'next-auth';
 import { SessionProvider } from 'next-auth/react';
 import { UserProvider } from '@/contexts/UserContext';
 import { AppShellLayout } from '@/components/layout/AppShell';
+import { SyncProvider } from '@/components/providers/SyncProvider';
 
 interface DashboardProvidersProps {
   children: ReactNode;
@@ -22,9 +23,11 @@ export function DashboardProviders({ children, session }: DashboardProvidersProp
   return (
     <SessionProvider session={session}>
       <UserProvider>
-        <AppShellLayout>
-          {children}
-        </AppShellLayout>
+        <SyncProvider enableNotifications={true} enableOfflineMode={true}>
+          <AppShellLayout>
+            {children}
+          </AppShellLayout>
+        </SyncProvider>
       </UserProvider>
     </SessionProvider>
   );
